@@ -1,0 +1,47 @@
+2026-03-09 19:45:34  INFO      sigmaflow — Logging to file: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/logs/sigmaflow_20260309_194534.log
+2026-03-09 19:45:34  INFO      sigmaflow — ── SigmaFlow v10 Pipeline Starting ───────────────────
+2026-03-09 19:45:34  INFO      sigmaflow.core.engine — Found 1 file(s) to process.
+2026-03-09 19:45:34  INFO      sigmaflow — ── Processing: manufacturing_process_dataset.xlsx ────
+2026-03-09 19:45:34  INFO      sigmaflow — ── Loading dataset ───────────────────────────────────
+2026-03-09 19:45:34  INFO      sigmaflow.core.engine — Loaded: 300 rows × 7 columns
+2026-03-09 19:45:34  INFO      sigmaflow — ── Detecting dataset type ────────────────────────────
+2026-03-09 19:45:34  INFO      sigmaflow.core.dataset_registry — Matched analyzer: 'spc'
+2026-03-09 19:45:34  INFO      sigmaflow.core.engine — Detected type: SPC
+2026-03-09 19:45:34  INFO      sigmaflow — ── Running statistical analysis ──────────────────────
+2026-03-09 19:45:34  INFO      sigmaflow — ── Generating figures ────────────────────────────────
+2026-03-09 19:45:36  DEBUG     sigmaflow.datasets.base_dataset — Plot saved: spc_xmr_chart.png
+2026-03-09 19:45:36  DEBUG     sigmaflow.datasets.base_dataset — Plot saved: spc_trend.png
+2026-03-09 19:45:36  INFO      sigmaflow — ── Running root cause detection ──────────────────────
+2026-03-09 19:45:36  INFO      sigmaflow.analysis.root_cause_analysis — Auto-selected target column: 'defect'
+2026-03-09 19:45:36  INFO      sigmaflow.analysis.root_cause_analysis — Root cause analysis — target column: 'defect'
+2026-03-09 19:45:37  DEBUG     sigmaflow.visualization.correlation_heatmap — Saved correlation heatmap: correlation_heatmap.png
+2026-03-09 19:45:37  DEBUG     sigmaflow.visualization.correlation_heatmap — Saved variable importance chart: variable_importance.png
+2026-03-09 19:45:37  INFO      sigmaflow — ── Running statistical tests ─────────────────────────
+2026-03-09 19:45:37  DEBUG     sigmaflow.statistics.normality_tests — Normality [temperature_C]: Normal
+2026-03-09 19:45:37  DEBUG     sigmaflow.statistics.normality_tests — Normality [pressure_bar]: Normal
+2026-03-09 19:45:37  DEBUG     sigmaflow.statistics.normality_tests — Normality [machine_speed_rpm]: Likely Normal
+2026-03-09 19:45:37  DEBUG     sigmaflow.statistics.normality_tests — Normality [humidity_pct]: Non-Normal
+2026-03-09 19:45:37  INFO      sigmaflow.core.engine — Normality tests complete (4 columns).
+2026-03-09 19:45:37  INFO      sigmaflow.core.engine — Hypothesis tests complete (1 tests).
+2026-03-09 19:45:37  INFO      sigmaflow — ── Running advanced analyses ─────────────────────────
+2026-03-09 19:45:37  INFO      sigmaflow — ── Running regression analysis ───────────────────────
+2026-03-09 19:45:37  INFO      sigmaflow.analysis.regression_analysis — Regression: response='defect', predictors=['temperature_C', 'pressure_bar', 'machine_speed_rpm', 'humidity_pct', 'dimension_mm']
+2026-03-09 19:45:38  DEBUG     sigmaflow.analysis.regression_analysis — Saved: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/regression_coefficients.png
+2026-03-09 19:45:39  INFO      sigmaflow — ── Running DOE (ANOVA) ───────────────────────────────
+2026-03-09 19:45:39  INFO      sigmaflow.analysis.doe_analysis — DOE: response='defect', factors=['defect']
+2026-03-09 19:45:39  INFO      sigmaflow — ── Generating advanced SPC charts ────────────────────
+2026-03-09 19:45:40  DEBUG     sigmaflow.visualization.cusum_chart — Saved CUSUM chart: cusum_chart.png
+2026-03-09 19:45:41  DEBUG     sigmaflow.visualization.ewma_chart — Saved EWMA chart: ewma_chart.png
+2026-03-09 19:45:42  DEBUG     sigmaflow.visualization.xbar_r_chart — Saved X-bar/R chart: xbar_r_chart.png
+2026-03-09 19:45:42  INFO      sigmaflow — ── Applying statistical rules ────────────────────────
+2026-03-09 19:45:42  DEBUG     sigmaflow.insights.rules_engine — RulesEngine produced 2 insight(s) for 'spc'
+2026-03-09 19:45:42  INFO      sigmaflow.core.engine — Finished 'manufacturing_process_dataset.xlsx' in 7.47 s.
+2026-03-09 19:45:42  INFO      sigmaflow — ── Exporting Results ─────────────────────────────────
+2026-03-09 19:45:42  INFO      sigmaflow.core.engine — insights.json saved: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/insights.json
+2026-03-09 19:45:42  INFO      sigmaflow — ── Generating HTML Dashboard ─────────────────────────
+2026-03-09 19:45:42  INFO      sigmaflow.report.html_dashboard — HTML dashboard written: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/dashboard/report.html
+2026-03-09 19:45:42  INFO      sigmaflow.core.engine — HTML dashboard: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/dashboard/report.html
+2026-03-09 19:45:42  INFO      sigmaflow — ── Pipeline Complete ─────────────────────────────────
+2026-03-09 19:45:42  INFO      sigmaflow.core.engine — Processed 1 dataset(s). Outputs: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output
+2026-03-09 19:45:42  INFO      sigmaflow.report.latex_report — LaTeX written: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/reports/process_analysis_report.tex
+2026-03-09 19:45:47  INFO      sigmaflow.report.latex_report — PDF compiled: /home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/reports/process_analysis_report.pdf

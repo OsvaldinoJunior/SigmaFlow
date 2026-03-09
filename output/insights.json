@@ -1,0 +1,48 @@
+[
+  {
+    "dataset": "manufacturing_process_dataset",
+    "type": "spc",
+    "abstract": "Automated SPC analysis of 'manufacturing_process_dataset' (300 observations, 7 variables) by SigmaFlow v10. 1 statistical anomaly(ies) detected (1 critical, 0 warnings). Regression R²=0.084. 1 column(s) flagged as non-normal.",
+    "insights": [
+      {
+        "rule": "western_electric_rule_1",
+        "description": "Rule 1: 2 point(s) outside the 3σ control limits (at indices [128, 174]).",
+        "meaning": "A data point beyond ±3σ from the mean is statistically rare (~0.27% chance under normality). Its presence strongly suggests a special-cause event — something changed in the process at that moment.",
+        "recommendation": "Identify and investigate the specific points flagged. Check for equipment malfunction, operator changes, raw material variation, or measurement errors. Remove confirmed special causes before computing capability indices.",
+        "severity": "critical",
+        "data": {
+          "ooc_indices": [
+            128,
+            174
+          ],
+          "ucl": 88.887,
+          "lcl": 70.848
+        }
+      },
+      {
+        "rule": "trend_stable",
+        "description": "No statistically significant trend detected in the process data.",
+        "meaning": "The Spearman correlation coefficient (τ = -0.018) and p-value (p = 0.7629) indicate no systematic drift in the process over time.",
+        "recommendation": "Continue routine monitoring. The process is temporally stable.",
+        "severity": "info",
+        "data": {
+          "tau": -0.0175,
+          "p_value": 0.762949
+        }
+      }
+    ],
+    "root_cause": [],
+    "advanced": [
+      {
+        "rule": "regression_significant_predictors",
+        "description": "Significant regression predictors: temperature_C",
+        "meaning": "R²=0.0835",
+        "recommendation": "Monitor and control these variables.",
+        "severity": "info"
+      }
+    ],
+    "summary": [
+      "Minor instability: 2 out-of-control point(s) — investigate"
+    ]
+  }
+]
