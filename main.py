@@ -228,14 +228,25 @@ def main() -> None:
         if rca.get("strong_candidates"):
             print(f"    🔍 Root cause: {', '.join(rca['strong_candidates'][:3])}")
 
-    # ── Generate LaTeX / PDF report ───────────────────────────────────────────
-    from sigmaflow.report.latex_report import LatexReportGenerator
+    # ── Generate academic LaTeX / PDF report (ABNT standard) ─────────────────
+    print("\n" + "─" * 64)
+    print("  ACADEMIC LATEX REPORT  (ABNT — relatorio consolidado)")
+    print("─" * 64)
 
-    gen  = LatexReportGenerator(results, output_dir=output_dir / "reports")
-    path = gen.generate()
+    from sigmaflow.report.template_engine import LatexEngine
+
+    report_dir = output_dir / "reports" / "relatorio_final"
+
+    latex_engine = LatexEngine(
+        all_results   = results,
+        output_dir    = report_dir,
+        organization  = "SigmaFlow v10",
+        compile_pdf   = True,
+    )
+    report_path = latex_engine.generate()
 
     dash = output_dir / "dashboard" / "report.html"
-    print(f"\n  ✅ Report:    {path}")
+    print(f"  ✅ Relatorio: {report_path}")
     if dash.exists():
         print(f"  ✅ Dashboard: {dash}")
     print(f"\n  outputs: figures/ | reports/ | dashboard/ | insights.json | logs/\n")

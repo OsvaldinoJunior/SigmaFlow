@@ -10,8 +10,9 @@ dist/
 build/
 .eggs/
 *.whl
+MANIFEST
 
-# ── Virtual environments ──────────────────────────────────────────────────────
+# ── Ambientes virtuais ────────────────────────────────────────────────────────
 .env
 .venv/
 venv/
@@ -19,7 +20,7 @@ env/
 conda/
 .conda/
 
-# ── SigmaFlow outputs (auto-generated) ───────────────────────────────────────
+# ── SigmaFlow — outputs gerados automaticamente ───────────────────────────────
 output/
 logs/
 figures/
@@ -30,7 +31,7 @@ reports/
 .ipynb_checkpoints/
 *.ipynb
 
-# ── Testing & coverage ────────────────────────────────────────────────────────
+# ── Testes e cobertura ────────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
 htmlcov/
@@ -46,21 +47,20 @@ htmlcov/
 *.sublime-project
 *.sublime-workspace
 
-# ── Operating system ──────────────────────────────────────────────────────────
+# ── Sistema operacional ───────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── LaTeX intermediary files ──────────────────────────────────────────────────
+# ── LaTeX ─────────────────────────────────────────────────────────────────────
 *.aux
 *.fls
 *.fdb_latexmk
 *.synctex.gz
 *.toc
 *.out
-*.log
 
-# ── Temporary / scratch ───────────────────────────────────────────────────────
+# ── Temporários ───────────────────────────────────────────────────────────────
 *.tmp
 *.bak
 *.swp
