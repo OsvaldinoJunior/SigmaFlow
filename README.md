@@ -1,117 +1,232 @@
-# SigmaFlow v10 — Automated Six Sigma Analysis Platform
+# SigmaFlow
 
-A modular Python framework for full-spectrum industrial process analysis using Statistical Process Control (SPC) and Six Sigma/DMAIC methodologies.
+> **A Python platform for automating Lean Six Sigma projects using the DMAIC framework.**
 
-## Pipeline
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-pytest-brightgreen)](tests/)
+
+SigmaFlow turns raw process data into complete DMAIC project reports — automatically.  
+Drop your dataset into `input/datasets/`, run one command, and get:
+
+- Statistical analysis (Cp, Cpk, XmR, Pareto, DOE, Regression, MSA, FMEA)
+- Process control charts (CUSUM, EWMA, X-bar/R, XmR)
+- Structured insights with severity classification
+- HTML dashboard + LaTeX/PDF report
+
+---
+
+## Features
+
+| Capability | Details |
+|---|---|
+| **Auto-detection** | Automatically identifies dataset type (SPC, Capability, Pareto, DOE, Logistics, Service) |
+| **DMAIC pipeline** | Full Define → Measure → Analyze → Improve → Control workflow |
+| **Statistical tests** | Normality (Shapiro-Wilk, Anderson-Darling, KS), hypothesis tests (t-test, ANOVA, Mann-Whitney) |
+| **Control charts** | XmR, X-bar/R, CUSUM, EWMA — with Western Electric rule detection |
+| **Process capability** | Cp, Cpk, Cpu, Cpl, DPMO, sigma level |
+| **Root cause analysis** | Correlation matrix, variable importance ranking |
+| **Modular datasets** | Add a new dataset type by creating a single file — zero changes to core |
+| **Reports** | HTML interactive dashboard + LaTeX/PDF scientific report |
+
+---
+
+## Project Structure
 
 ```
-Dataset → Detection → Statistical Analysis → Visualization →
-Root Cause Analysis → Statistical Tests → Advanced Analyses →
-Advanced SPC Charts → Insight Engine → LaTeX Report → HTML Dashboard
+SigmaFlow/
+│
+├── sigmaflow/                  ← Main Python package
+│   ├── core/                   ← Engine, registry, logger, output manager
+│   ├── analysis/               ← Statistical analysis modules
+│   ├── statistics/             ← Hypothesis and normality tests
+│   ├── visualization/          ← Charts and plots
+│   ├── datasets/               ← Auto-discoverable dataset analyzers
+│   ├── insights/               ← Rules engine and statistical rules
+│   ├── report/                 ← HTML dashboard + LaTeX report generators
+│   └── dmaic/                  ← DMAIC phase implementations
+│       ├── define/
+│       ├── measure/
+│       ├── analyze/
+│       ├── improve/
+│       └── control/
+│
+├── input/datasets/             ← Place your CSV / XLSX files here
+├── tests/                      ← Pytest test suite
+├── examples/                   ← Runnable example scripts
+├── docs/                       ← Documentation
+│
+├── main.py                     ← Zero-argument entry point
+├── cli.py                      ← Command-line interface
+├── requirements.txt
+├── pyproject.toml
+└── .gitignore
 ```
 
-## Quick Start
+### Module descriptions
+
+| Module | Purpose |
+|---|---|
+| `core/` | Central engine, dataset registry (auto-discovery via pkgutil), logging, output manager |
+| `analysis/` | Capability (Cp/Cpk), SPC (XmR), Pareto, DOE (ANOVA), regression, MSA (Gauge R&R), FMEA |
+| `statistics/` | Normality tests (Shapiro-Wilk, Anderson-Darling, KS), hypothesis testing |
+| `visualization/` | Control charts (XmR, CUSUM, EWMA, X-bar/R), capability plots, Pareto, heatmap |
+| `datasets/` | Auto-discoverable dataset analyzers (BaseDataset ABC + concrete implementations) |
+| `insights/` | Rules engine with Western Electric rules and structured Insight objects |
+| `report/` | HTML dashboard (Jinja2) and LaTeX/PDF report generator |
+| `dmaic/` | Phase-by-phase DMAIC implementations with structured deliverables |
+
+---
+
+## Installation
+
+### From source (recommended)
+
+```bash
+git clone https://github.com/<user>/sigmaflow.git
+cd sigmaflow
+pip install -e .
+```
+
+### Requirements only
 
 ```bash
 pip install -r requirements.txt
-python cli.py demo          # Generate demo data + full analysis
-python cli.py analyze your_data.csv
-python cli.py insights      # Print insights to console
-python cli.py dashboard     # Regenerate HTML dashboard
-python cli.py report        # Regenerate LaTeX/PDF report
-python cli.py list          # List registered analyzers
 ```
 
-## New in v10 — Full Six Sigma Toolkit
+### Optional: LaTeX PDF reports
 
-| Module | Capability |
-|---|---|
-| `statistics/normality_tests.py` | Shapiro-Wilk, Anderson-Darling, KS test |
-| `statistics/hypothesis_tests.py` | t-test (1/2 sample), Chi-square |
-| `analysis/regression_analysis.py` | Linear/Multiple regression, R², coefficients |
-| `analysis/doe_analysis.py` | ANOVA, main effects plots, interaction plots |
-| `analysis/msa_analysis.py` | Gauge R&R (ANOVA method), %GRR, ndc |
-| `analysis/fmea_analysis.py` | FMEA RPN = S×O×D, risk ranking, risk matrix |
-| `visualization/cusum_chart.py` | CUSUM control chart |
-| `visualization/ewma_chart.py` | EWMA control chart (λ, L configurable) |
-| `visualization/xbar_r_chart.py` | X-bar and R chart (subgroup data) |
+```bash
+# Ubuntu / Debian
+sudo apt install texlive-latex-extra
 
-## Smart Auto-Dispatch (Engine v10)
+# macOS
+brew install --cask mactex
 
-The engine automatically runs analyses based on dataset structure:
-
-| Dataset contains | Analysis triggered |
-|---|---|
-| `USL` / `LSL` columns | Capability analysis (Cp, Cpk, DPMO) |
-| `Part` + `Operator` + `Measurement` | MSA / Gauge R&R |
-| `Severity` + `Occurrence` + `Detection` | FMEA (RPN scoring) |
-| Categorical + numeric columns | DOE (ANOVA, main effects, interaction plots) |
-| ≥ 3 numeric columns | Multiple regression |
-| Any numeric columns | Normality tests + hypothesis tests |
-| Time-series data | CUSUM + EWMA + X-bar/R charts |
-
-## Architecture
-
-```
-sigmaflow/
-├── core/
-│   ├── engine.py            Smart pipeline orchestrator (v10)
-│   ├── dataset_registry.py  Auto-discovers analyzers
-│   ├── dataset_detector.py  Type detection logic
-│   └── logger.py            Structured logging
-├── statistics/              ← NEW v10
-│   ├── normality_tests.py   Shapiro-Wilk, AD, KS
-│   └── hypothesis_tests.py  t-tests, chi-square
-├── analysis/
-│   ├── spc_analysis.py      XmR charts, trends
-│   ├── capability_analysis.py  Cp, Cpk, DPMO
-│   ├── pareto_analysis.py   80/20 analysis
-│   ├── root_cause_analysis.py  Pearson/Spearman correlation
-│   ├── regression_analysis.py  ← NEW: Linear/multiple regression
-│   ├── doe_analysis.py      ← NEW: ANOVA, main effects, interactions
-│   ├── msa_analysis.py      ← NEW: Gauge R&R
-│   └── fmea_analysis.py     ← NEW: RPN analysis
-├── visualization/
-│   ├── control_charts.py    XmR charts
-│   ├── histograms.py        Distribution plots
-│   ├── capability_plots.py  Capability curves
-│   ├── pareto_chart.py      Pareto with vital-few coloring
-│   ├── correlation_heatmap.py  Heatmap + variable importance
-│   ├── cusum_chart.py       ← NEW: CUSUM control chart
-│   ├── ewma_chart.py        ← NEW: EWMA control chart
-│   └── xbar_r_chart.py      ← NEW: X-bar and R chart
-├── insights/
-│   ├── rules_engine.py      RulesEngine orchestrator
-│   └── statistical_rules.py WE Rules 1-4, Capability, Trend
-├── report/
-│   ├── latex_report.py      Scientific LaTeX report
-│   ├── html_dashboard.py    Self-contained HTML dashboard
-│   └── latex_templates/main.tex  Editable template
-└── datasets/                6 built-in dataset analyzers
+# Conda
+conda install -c conda-forge texlive-core
 ```
 
-## Output Structure
+---
 
+## Quick Start
+
+**1. Drop your data in:**
 ```
-output/
-├── figures/<dataset>/
-│   ├── spc_xmr_chart.png
-│   ├── cusum_chart.png        ← NEW
-│   ├── ewma_chart.png         ← NEW
-│   ├── xbar_r_chart.png       ← NEW
-│   ├── regression_coefficients.png  ← NEW
-│   ├── regression_diagnostics.png   ← NEW
-│   ├── doe_main_effects.png   ← NEW
-│   ├── doe_interaction_plot.png ← NEW
-│   ├── msa_grr_components.png ← NEW
-│   ├── fmea_rpn_ranking.png   ← NEW
-│   ├── fmea_risk_matrix.png   ← NEW
-│   └── correlation_heatmap.png
-├── reports/
-│   ├── process_analysis_report.tex
-│   └── process_analysis_report.pdf
-├── dashboard/
-│   └── report.html   ← Self-contained, open in browser
-├── insights.json
-└── logs/
+input/datasets/your_data.csv
 ```
+
+**2. Run the pipeline:**
+```bash
+python main.py
+```
+
+**3. Check outputs:**
+```
+output/figures/<dataset>/    ← PNG charts
+output/reports/              ← PDF report
+output/dashboard/report.html ← Interactive dashboard
+output/insights.json         ← Machine-readable insights
+```
+
+**CLI options:**
+```bash
+python main.py --demo     # Generate 5 demo datasets and run
+python main.py --list     # List registered analyzers
+```
+
+---
+
+## Python API
+
+```python
+from sigmaflow.core.engine import Engine
+
+engine = Engine(input_dir="input/datasets", output_dir="output")
+results = engine.run()
+
+for r in results:
+    print(f"{r['name']}  [{r['dataset_type'].upper()}]  shape={r['shape']}")
+    for insight in r["insights"]:
+        print(f"  → {insight}")
+```
+
+---
+
+## Capability Analysis
+
+```python
+import pandas as pd
+import numpy as np
+from sigmaflow.analysis.capability_analysis import compute_capability
+
+data   = pd.Series(np.random.normal(10.0, 0.08, 300))
+result = compute_capability(data, usl=10.3, lsl=9.7)
+
+print(f"Cpk = {result['Cpk']:.3f}")
+print(f"DPMO = {result['dpmo']:.1f}")
+print(f"Sigma level = {result['sigma_level']:.2f}σ")
+```
+
+---
+
+## Adding a New Dataset Type
+
+Zero changes to core — just create one file:
+
+```python
+# sigmaflow/datasets/my_dataset.py
+from sigmaflow.datasets.base_dataset import BaseDataset
+
+class MyDataset(BaseDataset):
+    name     = "my_type"
+    priority = 55
+
+    def detect(self, df):
+        return "my_column" in df.columns
+
+    def run_analysis(self, df):
+        return {"mean": float(df["my_column"].mean())}
+
+    def generate_plots(self, df, output_folder):
+        return []
+
+    def generate_insights(self, df):
+        return ["My custom insight."]
+```
+
+---
+
+## Supported Dataset Types
+
+| Type | Detection | Key outputs |
+|---|---|---|
+| `capability` | USL/LSL columns or single numeric ≥30 rows | Cp, Cpk, DPMO, sigma level |
+| `spc` | Datetime or monotonic index | XmR chart, Western Electric violations |
+| `root_cause` | Categorical + integer defect counts | Pareto chart, vital few |
+| `doe` | Columns with {-1, +1} values | Main effects, interaction plots, R² |
+| `logistics` | Keywords: km, distance, delivery | Lead time, OTD rate |
+| `service` | Keywords: wait, service, satisfaction | Wait time, SLA violations |
+
+---
+
+## Running Tests
+
+```bash
+pytest tests/ -v
+pytest tests/ -v --cov=sigmaflow --cov-report=term-missing
+```
+
+---
+
+## Documentation
+
+- [`docs/overview.md`](docs/overview.md) — Architecture overview
+- [`docs/modules.md`](docs/modules.md) — Module API reference
+- [`docs/dmaic_workflow.md`](docs/dmaic_workflow.md) — DMAIC phase guide
+
+---
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.

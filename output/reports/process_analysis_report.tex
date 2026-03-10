@@ -29,7 +29,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\small\color{sigmaGray}SigmaFlow v8 — Statistical Analysis Report}
-\rhead{\small\color{sigmaGray}09 March 2026, 19:45}
+\rhead{\small\color{sigmaGray}09 March 2026, 21:41}
 \cfoot{\small\thepage}
 
 %% ── Title ────────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@
   {\normalsize\textbf{Engine:} SigmaFlow Engine v8}
 }
 \author{}
-\date{09 March 2026, 19:45}
+\date{09 March 2026, 21:41}
 
 \begin{document}
 \maketitle
@@ -97,7 +97,7 @@ The analysis pipeline consists of the following stages:
 \toprule
 \textbf{Dataset} & \textbf{Type} & \textbf{Shape} & \textbf{Time (s)} & \textbf{Insights} \\
 \midrule
-  manufacturing\_process\_dataset & SPC & 300\(\times\)7 & 7.47s & 2\\
+  manufacturing\_process\_dataset & SPC & 300\(\times\)7 & 8.38s & 2\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -191,7 +191,7 @@ $|r| < 0.30$ & Negligible \\
   \item[Dataset]    \textbf{manufacturing\_process\_dataset}
   \item[Type]       \textbf{SPC}
   \item[Dimensions] 300 rows \(\times\) 7 columns
-  \item[Processing] 7.47 seconds
+  \item[Processing] 8.38 seconds
 \end{description}
 \subsubsection*{Summary}
 Automated SPC analysis of 'manufacturing\_process\_dataset' (300 observations, 7 variables) by SigmaFlow v10. 1 statistical anomaly(ies) detected (1 critical, 0 warnings). Regression R?=0.084. 1 column(s) flagged as non-normal.
@@ -220,32 +220,32 @@ Automated SPC analysis of 'manufacturing\_process\_dataset' (300 observations, 7
 \subsubsection*{Process Stability Analysis}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/spc_xmr_chart.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/spc_xmr_chart.png}
   \caption{Spc Xmr Chart}
 \end{figure}
 \medskip
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/spc_trend.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/spc_trend.png}
   \caption{Spc Trend}
 \end{figure}
 \medskip
 \subsubsection*{Graphical Results}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/regression_coefficients.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/regression_coefficients.png}
   \caption{Regression Coefficients}
 \end{figure}
 \medskip
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/regression_actual_vs_predicted.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/regression_actual_vs_predicted.png}
   \caption{Regression Actual Vs Predicted}
 \end{figure}
 \medskip
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/regression_diagnostics.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/regression_diagnostics.png}
   \caption{Regression Diagnostics}
 \end{figure}
 \medskip
@@ -284,13 +284,13 @@ No variables showed meaningful correlation with 'defect'. The variation may be d
 \end{center}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/correlation_heatmap.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/correlation_heatmap.png}
   \caption{Correlation Heatmap}
 \end{figure}
 \medskip
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/sigmaflow_patched/sf_patched/output/figures/manufacturing_process_dataset/variable_importance.png}
+  \includegraphics[width=0.95\linewidth]{/home/osvaldinojunior/Documents/Projetos/SigmaFlow/output/figures/manufacturing_process_dataset/variable_importance.png}
   \caption{Variable Importance}
 \end{figure}
 \medskip
