@@ -228,12 +228,12 @@ def main() -> None:
         if rca.get("strong_candidates"):
             print(f"    🔍 Root cause: {', '.join(rca['strong_candidates'][:3])}")
 
-    # ── Generate academic LaTeX / PDF report (ABNT standard) ─────────────────
+    # ── Generate academic LaTeX / PDF report (DMAIC — Jinja2 engine) ─────────
     print("\n" + "─" * 64)
-    print("  ACADEMIC LATEX REPORT  (ABNT — relatorio consolidado)")
+    print("  ACADEMIC LATEX REPORT  (DMAIC — Jinja2 template engine)")
     print("─" * 64)
 
-    from sigmaflow.report.template_engine import LatexEngine
+    from sigmaflow.report import LatexEngine
 
     report_dir = output_dir / "reports" / "relatorio_final"
 

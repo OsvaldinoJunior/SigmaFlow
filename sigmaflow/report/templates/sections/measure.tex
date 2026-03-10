@@ -1,0 +1,75 @@
+\section{Fase Measure --- Medi\c{c}\~{a}o}
+
+{{ measure.intro }}
+
+\subsection{Avalia\c{c}\~{a}o da Normalidade}
+
+{{ measure.normality_intro }}
+
+{% if measure.has_normality_table %}
+\begin{table}[H]
+\caption{Resultados dos testes de normalidade ($\alpha = 0{,}05$)}
+\label{tab:normalidade}
+\centering
+\begin{tabular}{p{4.5cm}ccc}
+\toprule
+\textbf{Vari\'avel} & \textbf{Shapiro--Wilk ($p$)} & \textbf{Anderson--Darling} & \textbf{Veredicto} \\
+\midrule
+{% for row in measure.normality_rows %}
+{{ row.variable }} & {{ row.sw_p }} & {{ row.ad_p }} & {{ row.verdict }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 (an\'alise autom\'atica)}
+\end{table}
+{% endif %}
+
+{{ measure.normality_interpretation }}
+
+\subsection{An\'alise de Capacidade do Processo}
+
+{{ measure.capability_text }}
+
+{% if measure.has_capability_table %}
+\begin{table}[H]
+\caption{\'Indices de capacidade do processo --- \textbf{ {{- measure.target -}} }}
+\label{tab:capacidade}
+\centering
+\begin{tabular}{lclc}
+\toprule
+\textbf{\'Indice} & \textbf{Valor} & \textbf{\'Indice} & \textbf{Valor} \\
+\midrule
+$C_p$       & {{ measure.cap.cp }}    & $C_{pk}$ & \textbf{ {{- measure.cap.cpk -}} } \\
+DPMO        & {{ measure.cap.dpmo }}  & N\'ivel $\sigma$ & {{ measure.cap.sigma }}$\sigma$ \\
+USL         & {{ measure.cap.usl }}   & LSL      & {{ measure.cap.lsl }} \\
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 (an\'alise autom\'atica)}
+\end{table}
+{% endif %}
+
+{{ measure.capability_interpretation }}
+
+{% if measure.has_hypothesis %}
+\subsection{Testes de Hip\'otese}
+
+{{ measure.hypothesis_intro }}
+
+\begin{table}[H]
+\caption{Resultados dos testes de hip\'otese ($\alpha = 0{,}05$)}
+\label{tab:hipoteses}
+\centering
+\begin{tabular}{p{5.5cm}ccc}
+\toprule
+\textbf{Teste} & \textbf{Estat\'istica} & \textbf{Valor-$p$} & \textbf{Significativo?} \\
+\midrule
+{% for row in measure.hypothesis_rows %}
+{{ row.test }} & {{ row.stat }} & {{ row.pvalue }} & {{ row.significant }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 (an\'alise autom\'atica)}
+\end{table}
+
+{{ measure.hypothesis_interpretation }}
+{% endif %}

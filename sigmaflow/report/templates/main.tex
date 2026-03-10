@@ -1,0 +1,159 @@
+\documentclass[12pt]{article}
+
+%% ============================================================
+%%  PACOTES
+%% ============================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathptmx}
+\usepackage{times}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{indentfirst}
+\usepackage{etoolbox}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+%% ============================================================
+%%  PAGINA
+%% ============================================================
+\geometry{a4paper, top=3cm, left=3cm, bottom=2cm, right=2cm}
+\onehalfspacing
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0pt}
+
+%% ============================================================
+%%  TITULOS
+%% ============================================================
+\titlespacing*{\section}      {0pt}{1\baselineskip}{1\baselineskip}
+\titlespacing*{\subsection}   {0pt}{1\baselineskip}{1\baselineskip}
+\titlespacing*{\subsubsection}{0pt}{1\baselineskip}{1\baselineskip}
+\titleformat{\section}   {\bfseries}  {\thesection\space} {0pt}{\MakeUppercase}
+\titleformat{\subsection}{\normalfont}{\thesubsection\space}{0pt}{\MakeUppercase}
+\titleformat{\subsubsection}{\bfseries\itshape}{\thesubsubsection\space}{0pt}{}
+
+%% ============================================================
+%%  CABECALHO / RODAPE
+%% ============================================================
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\lhead{\small SigmaFlow v10 --- Relat\'orio DMAIC}
+\rhead{\small \thepage}
+
+%% ============================================================
+%%  CAPTION
+%% ============================================================
+\captionsetup{labelsep=endash, justification=justified,
+              singlelinecheck=false, font=normalsize, labelfont=bf}
+\captionsetup[figure]{position=below, justification=centering}
+\captionsetup[table] {position=above}
+\newcommand{\fonte}[1]{\par\vspace{2pt}{\small\textbf{Fonte:} #1}}
+
+%% ============================================================
+%%  CAIXAS DE INSIGHT  (tcolorbox)
+%% ============================================================
+\definecolor{corCritico}{RGB}{180,30,30}
+\definecolor{corAviso}  {RGB}{200,130,0}
+\definecolor{corInfo}   {RGB}{30,100,170}
+\colorlet{critico}{corCritico}
+\colorlet{aviso}  {corAviso}
+\colorlet{info}   {corInfo}
+
+\tcbset{
+  insightbase/.style={
+    breakable, enhanced, boxrule=0.8pt, arc=4pt,
+    left=6pt, right=6pt, top=4pt, bottom=4pt,
+    fonttitle=\bfseries\small
+  }
+}
+\newtcolorbox{insightcritico}[1][]{insightbase,
+  colback=red!5, colframe=corCritico, title={Achado Cr\'itico}, #1}
+\newtcolorbox{insightaviso}[1][]{insightbase,
+  colback=orange!5, colframe=corAviso, title={Aviso}, #1}
+\newtcolorbox{insightinfo}[1][]{insightbase,
+  colback=blue!5, colframe=corInfo, title={Informa\c{c}\~ao}, #1}
+
+%% ============================================================
+%%  HYPERREF
+%% ============================================================
+\hypersetup{
+  colorlinks=true,
+  linkcolor=corInfo,
+  urlcolor=corInfo,
+  citecolor=gray,
+  pdfauthor={SigmaFlow v10},
+  pdftitle={Relat\'orio DMAIC --- {{ meta.dataset_name }}},
+  pdfsubject={Analise DMAIC Automatizada}
+}
+
+%% ============================================================
+%%                        DOCUMENTO
+%% ============================================================
+\begin{document}
+
+%% ----- CAPA -----
+\begin{titlepage}
+  \begin{center}
+    \vspace*{1.5cm}
+    {\large\bfseries RELATORIO TECNICO\\[0.3cm]
+     ANALISE LEAN SIX SIGMA --- FRAMEWORK DMAIC}\\[2cm]
+
+    {\LARGE\bfseries {{ meta.title }}}\\[1.5cm]
+
+    {\large\textbf{Dataset analisado:} {{ meta.dataset_name }}}\\[0.5cm]
+    {\large\textbf{Tipo detectado:} {{ meta.dataset_type | upper }}}\\[0.5cm]
+    {\large\textbf{Dimens\~{o}es:} {{ meta.n_rows }} observa\c{c}\~{o}es $\times$ {{ meta.n_cols }} vari\'aveis}\\[1.5cm]
+
+    \vfill
+    {\normalsize {{ meta.organization }}}\\[0.4cm]
+    {\normalsize Gerado automaticamente pelo \textbf{SigmaFlow v10}}\\[0.3cm]
+    {\normalsize {{ meta.date }}}
+  \end{center}
+\end{titlepage}
+
+%% ----- RESUMO -----
+\begin{abstract}
+{{ abstract }}
+\end{abstract}
+
+\newpage
+
+%% ----- SUMARIO -----
+\tableofcontents
+\newpage
+
+%% ============================================================
+%%  SECOES
+%% ============================================================
+\input{sections/intro}
+\input{sections/dataset}
+\input{sections/metodologia}
+\input{sections/measure}
+\input{sections/analyze}
+\input{sections/improve}
+\input{sections/control}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\end{document}
