@@ -115,6 +115,10 @@ class Engine:
             "root_cause": {}, "abstract": "",
             "statistics": {}, "advanced": {},
             "elapsed_s": 0.0, "errors": {},
+            # ── Problem detection (new in v10.1) ─────────────────────────────
+            "detection": {},        # DetectionResult.as_dict()
+            "analysis_plan": {},    # AnalysisSelector DMAIC plan
+            "profile": {},          # DataProfiler metadata
         }
 
         # 1. LOAD
@@ -128,7 +132,41 @@ class Engine:
             result["errors"]["load"] = str(exc)
             return result
 
-        # 2. DETECT
+        # 1b. PROFILE (DataProfiler — drives all downstream detection)
+        log_stage("Profiling dataset structure")
+        try:
+            from sigmaflow.core.data_profiler import DataProfiler
+            profiler = DataProfiler()
+            profile  = profiler.profile(df)
+            result["profile"] = profile
+        except Exception as exc:
+            logger.error("DataProfiler error: %s", exc)
+            result["errors"]["profile"] = str(exc)
+            profile = {}
+
+        # 1c. PROBLEM DETECTION + ANALYSIS SELECTION
+        log_stage("Detecting statistical problem type")
+        try:
+            from sigmaflow.core.problem_detector  import ProblemDetector
+            from sigmaflow.core.analysis_selector import AnalysisSelector
+
+            detection     = ProblemDetector().detect(profile)
+            analysis_plan = AnalysisSelector().select(detection)
+
+            result["detection"]     = detection.as_dict()
+            result["analysis_plan"] = analysis_plan
+
+            # Propagate response variable if DataProfiler missed it
+            if detection.response_variable and not profile.get("primary_target"):
+                profile["primary_target"] = detection.response_variable
+
+        except Exception as exc:
+            logger.error("Problem detection error: %s", exc)
+            result["errors"]["detection"] = str(exc)
+            detection     = None
+            analysis_plan = {}
+
+        # 2. DETECT (registry type — kept for backward compatibility)
         log_stage("Detecting dataset type")
         analyzer = self.registry.match(df)
         if analyzer is None:
@@ -136,7 +174,9 @@ class Engine:
             result["errors"]["detect"] = "No registered analyzer matched."
             return result
         result["dataset_type"] = analyzer.name
-        logger.info("Detected type: %s", analyzer.name.upper())
+        logger.info("Detected type: %s | Problems: %s",
+                    analyzer.name.upper(),
+                    result["detection"].get("problems", []))
         print(f"\n  📂 {path.name}  |  {analyzer.name.upper()}  |  {df.shape[0]}×{df.shape[1]}")
 
         # 3. ANALYSE
@@ -197,6 +237,36 @@ class Engine:
         except Exception as exc:
             logger.error("Insights error: %s", exc)
             result["errors"]["insights"] = str(exc)
+
+        # 9b. INSIGHT ENGINE + RECOMMENDATION ENGINE (new in v10.2)
+        log_stage("Generating analytical insights and recommendations")
+        try:
+            from sigmaflow.insights.insight_engine        import InsightEngine
+            from sigmaflow.insights.recommendation_engine import RecommendationEngine
+
+            analysis_insights = InsightEngine().generate(result)
+            rec_engine        = RecommendationEngine(result, analysis_insights)
+
+            result["analysis_insights"]   = [i.as_dict() for i in analysis_insights]
+            result["executive_summary"]   = rec_engine.executive_summary()
+            result["recommendations"]     = rec_engine.prioritized_recommendations()
+            result["risk_level"]          = rec_engine.risk_level()
+            result["risk_label"]          = rec_engine.risk_label()
+            result["risk_color"]          = rec_engine.risk_color()
+
+            n_crit = sum(1 for i in analysis_insights if i.severity == "critical")
+            n_warn = sum(1 for i in analysis_insights if i.severity == "warning")
+            print(f"  📊 Insights gerados   : {len(analysis_insights)} "
+                  f"({n_crit} críticos, {n_warn} avisos)")
+            logger.info("InsightEngine: %d insights, risk=%s",
+                        len(analysis_insights), result['risk_level'])
+        except Exception as exc:
+            logger.error("InsightEngine error: %s", exc)
+            result["errors"]["insight_engine"] = str(exc)
+            result["analysis_insights"] = []
+            result["executive_summary"] = ""
+            result["recommendations"]   = []
+            result["risk_level"]        = "info"
 
         # 10. ABSTRACT
         result["abstract"] = self._generate_abstract(result)

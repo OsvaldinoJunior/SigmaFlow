@@ -216,6 +216,24 @@ def main() -> None:
         print("  Use:  python main.py --demo\n")
         return
 
+    # ── Print detection summary ──────────────────────────────────────────────
+    print("\n" + "─" * 64)
+    print("  PROBLEM DETECTION & ANALYSIS SELECTION")
+    print("─" * 64)
+    for r in results:
+        det = r.get("detection", {})
+        problems = det.get("problems", [])
+        primary  = det.get("primary_problem", "?")
+        response = det.get("response_variable", "?")
+        if problems:
+            print(f"\n  [{r['dataset_type'].upper()}] {r['name']}")
+            print(f"    Detected problems : {', '.join(p.upper() for p in problems)}")
+            print(f"    Primary problem   : {primary.upper()}")
+            print(f"    Response variable : {response}")
+            plan = r.get("analysis_plan", {})
+            total_analyses = sum(len(v) for v in plan.values())
+            print(f"    Analyses selected : {total_analyses} across 5 DMAIC phases")
+
     # ── Print insights to console ─────────────────────────────────────────────
     print("\n" + "─" * 64)
     print("  INSIGHTS")

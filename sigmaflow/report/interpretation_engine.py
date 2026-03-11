@@ -116,21 +116,21 @@ class InterpretationEngine:
         if cpk is not None:
             cap_line = (
                 rf"O \'indice de capacidade $C_{{pk}} = {_fmt(cpk, 3)}$ "
-                rf"classificou o processo como \\textbf{{{self.cpk_verdict(cpk)}}}. "
+                rf"classificou o processo como \textbf{{{self.cpk_verdict(cpk)}}}. "
             )
 
         return (
             rf"Este relat\'orio apresenta a an\'alise estat\'istica automatizada "
-            rf"do dataset \\textbf{{{_tex(self.name)}}} ({n_rows} observa\c{{c}}\~{{o}}es "
-            rf"$\\times$ {n_cols} vari\'aveis, tipo: {dtype}), conduzida pelo sistema "
-            rf"\\textbf{{SigmaFlow v10}} aplicando o \\textit{{framework}} DMAIC "
-            rf"(\\textit{{Define, Measure, Analyze, Improve, Control}}). "
+            rf"do dataset \textbf{{{_tex(self.name)}}} ({n_rows} observa\c{{c}}\~{{o}}es "
+            rf"$\times$ {n_cols} vari\'aveis, tipo: {dtype}), conduzida pelo sistema "
+            rf"\textbf{{SigmaFlow v10}} aplicando o \textit{{framework}} DMAIC "
+            rf"(\textit{{Define, Measure, Analyze, Improve, Control}}). "
             rf"Foram aplicados testes de normalidade (Shapiro--Wilk e Anderson--Darling), "
             rf"an\'alise de capacidade do processo, Controle Estat\'istico de Processos (CEP) "
             rf"e an\'alise de correla\c{{c}}\~{{a}}o multivariada sobre a vari\'avel-resposta "
-            rf"\\textbf{{{target}}}. "
+            rf"\textbf{{{target}}}. "
             rf"{cap_line}"
-            rf"No total, \\textbf{{{n_ins} \\textit{{insights}} estat\'isticos}} foram identificados "
+            rf"No total, \textbf{{{n_ins} \textit{{insights}} estat\'isticos}} foram identificados "
             rf"ao longo das cinco fases do ciclo DMAIC em {elapsed} segundos de processamento."
         )
 
@@ -181,14 +181,14 @@ class InterpretationEngine:
         else:
             non_normal = n_total - n_normal
             return (
-                rf"Dos {n_total} vari\'aveis testadas, \\textbf{{{n_normal} "
-                rf"({pct_normal}\\%)}} apresentaram ader\\^{{e}}ncia \\`{{a}} "
-                rf"distribui\\c{{c}}\\~{{a}}o normal ($p > 0{{,}}05$), enquanto "
-                rf"\\textbf{{{non_normal}}} tiveram a hip\'otese de normalidade "
-                rf"rejeitada ao n\'ivel de signific\\^{{a}}ncia de 5\\%. "
-                rf"Para as vari\'aveis n\\~{{a}}o normais, recomenda-se o emprego "
-                rf"de m\'etodos n\\~{{a}}o param\'etricos ou transforma\\c{{c}}\\~{{o}}es "
-                rf"de estabiliza\\c{{c}}\\~{{a}}o de vari\\^{{a}}ncia (Box--Cox, "
+                rf"Dos {n_total} vari\'aveis testadas, \textbf{{{n_normal} "
+                rf"({pct_normal}\\%)}} apresentaram ader\^{{e}}ncia \`{{a}} "
+                rf"distribui\c{{c}}\~{{a}}o normal ($p > 0{{,}}05$), enquanto "
+                rf"\textbf{{{non_normal}}} tiveram a hip\'otese de normalidade "
+                rf"rejeitada ao n\'ivel de signific\^{{a}}ncia de 5\\%. "
+                rf"Para as vari\'aveis n\~{{a}}o normais, recomenda-se o emprego "
+                rf"de m\'etodos n\~{{a}}o param\'etricos ou transforma\c{{c}}\~{{o}}es "
+                rf"de estabiliza\c{{c}}\~{{a}}o de vari\^{{a}}ncia (Box--Cox, "
                 rf"log, ra\\'{z} quadrada)."
             )
 
@@ -211,26 +211,26 @@ class InterpretationEngine:
 
         base = (
             rf"O \'indice $C_{{pk}} = {_fmt(cpk, 3)}$ classifica o processo como "
-            rf"\\textbf{{{verdict}}}. "
+            rf"\textbf{{{verdict}}}. "
         )
 
         if cp and cpk:
             diff = cp - cpk
             if diff > 0.2:
                 base += (
-                    rf"A diferen\\c{{c}}a entre $C_p = {_fmt(cp, 3)}$ e $C_{{pk}} = {_fmt(cpk, 3)}$ "
-                    rf"(\\Delta = {_fmt(diff, 3)}) indica que o processo, embora possua "
-                    rf"variabilidade compat\'ivel com as especifica\\c{{c}}\\~{{o}}es, "
-                    rf"apresenta descentramento da m\'edia em rela\\c{{c}}\\~{{a}}o ao alvo. "
-                    rf"A\\c{{c}}\\~{{o}}es de recentramento devem ser priorizadas antes "
-                    rf"de investir na redu\\c{{c}}\\~{{a}}o de variabilidade. "
+                    rf"A diferen\c{{c}}a entre $C_p = {_fmt(cp, 3)}$ e $C_{{pk}} = {_fmt(cpk, 3)}$ "
+                    rf"(\Delta = {_fmt(diff, 3)}) indica que o processo, embora possua "
+                    rf"variabilidade compat\'ivel com as especifica\c{{c}}\~{{o}}es, "
+                    rf"apresenta descentramento da m\'edia em rela\c{{c}}\~{{a}}o ao alvo. "
+                    rf"A\c{{c}}\~{{o}}es de recentramento devem ser priorizadas antes "
+                    rf"de investir na redu\c{{c}}\~{{a}}o de variabilidade. "
                 )
 
         if dpmo:
             base += (
-                rf"A taxa de defeitos estimada \'e de \\textbf{{{dpmo:,.0f} DPMO}} "
-                rf"(Defeitos Por Milh\\~{{a}}o de Oportunidades), correspondendo a "
-                rf"um n\'ivel sigma de {_fmt(sigma_lv, 2)}$\\sigma$. "
+                rf"A taxa de defeitos estimada \'e de \textbf{{{dpmo:,.0f} DPMO}} "
+                rf"(Defeitos Por Milh\~{{a}}o de Oportunidades), correspondendo a "
+                rf"um n\'ivel sigma de {_fmt(sigma_lv, 2)}$\sigma$. "
             )
 
         if cpk < 1.0:
@@ -289,28 +289,28 @@ class InterpretationEngine:
         parts = []
         if significant:
             names = ", ".join(
-                rf"\\textit{{{_tex(n.replace('_', ' ').title())}}}"
+                rf"\textit{{{_tex(n.replace('_', ' ').title())}}}"
                 for n in significant[:3]
             )
             parts.append(
-                rf"Os testes {names} revelaram \\textbf{{diferen\\c{{c}}a "
+                rf"Os testes {names} revelaram \textbf{{diferen\c{{c}}a "
                 rf"estatisticamente significativa}} ($p < 0{{,}}05$), "
-                rf"indicando que as popula\\c{{c}}\\~{{o}}es comparadas "
+                rf"indicando que as popula\c{{c}}\~{{o}}es comparadas "
                 rf"apresentam caracter\'isticas distribicionais distintas. "
-                rf"Esse resultado deve orientar a sele\\c{{c}}\\~{{a}}o de "
-                rf"m\'etodos de an\'alise n\\~{{a}}o param\'etricos ou a "
-                rf"estratifica\\c{{c}}\\~{{a}}o dos dados por grupo."
+                rf"Esse resultado deve orientar a sele\c{{c}}\~{{a}}o de "
+                rf"m\'etodos de an\'alise n\~{{a}}o param\'etricos ou a "
+                rf"estratifica\c{{c}}\~{{a}}o dos dados por grupo."
             )
         if not_sig:
             names = ", ".join(
-                rf"\\textit{{{_tex(n.replace('_', ' ').title())}}}"
+                rf"\textit{{{_tex(n.replace('_', ' ').title())}}}"
                 for n in not_sig[:3]
             )
             parts.append(
-                rf"Para os testes {names}, n\\~{{a}}o foi poss\'ivel rejeitar "
-                rf"a hip\'otese nula ($p \\geq 0{{,}}05$), sugerindo "
-                rf"aus\\^{{e}}ncia de evid\\^{{e}}ncia estat\'istica de "
-                rf"diferen\\c{{c}}a entre os grupos analisados."
+                rf"Para os testes {names}, n\~{{a}}o foi poss\'ivel rejeitar "
+                rf"a hip\'otese nula ($p \geq 0{{,}}05$), sugerindo "
+                rf"aus\^{{e}}ncia de evid\^{{e}}ncia estat\'istica de "
+                rf"diferen\c{{c}}a entre os grupos analisados."
             )
 
         return " ".join(parts)
@@ -333,29 +333,29 @@ class InterpretationEngine:
         weak    = [v for v in ranked if abs(v.get("pearson_r", 0)) < 0.50]
 
         parts = [
-            rf"A an\'alise de correla\c{{c}}\\~{{a}}o multivariada identificou "
+            rf"A an\'alise de correla\c{{c}}\~{{a}}o multivariada identificou "
             rf"{len(ranked)} vari\'aveis preditoras da resposta "
-            rf"\\textbf{{{target}}}. "
+            rf"\textbf{{{target}}}. "
         ]
 
         if strong:
-            names = ", ".join(rf"\\textbf{{{_tex(v['variable'])}}}" for v in strong[:3])
+            names = ", ".join(rf"\textbf{{{_tex(v['variable'])}}}" for v in strong[:3])
             top_r = _fmt(strong[0].get("pearson_r", 0), 3)
             parts.append(
-                rf"As vari\'aveis {names} apresentaram \\textbf{{correla\c{{c}}\\~{{a}}o "
-                rf"forte}} ($|r| \\geq 0{{,}}70$, m\'ax: $r = {top_r}$), "
-                rf"constituindo os \\textbf{{candidatos priorit\'arios a causas raiz}}. "
-                rf"Interven\c{{c}}\\~{{o}}es nesses fatores t\\^{{e}}m o maior "
+                rf"As vari\'aveis {names} apresentaram \textbf{{correla\c{{c}}\~{{a}}o "
+                rf"forte}} ($|r| \geq 0{{,}}70$, m\'ax: $r = {top_r}$), "
+                rf"constituindo os \textbf{{candidatos priorit\'arios a causas raiz}}. "
+                rf"Interven\c{{c}}\~{{o}}es nesses fatores t\^{{e}}m o maior "
                 rf"potencial de impacto na qualidade do processo. "
             )
 
         if moderate:
-            names = ", ".join(rf"\\textbf{{{_tex(v['variable'])}}}" for v in moderate[:2])
+            names = ", ".join(rf"\textbf{{{_tex(v['variable'])}}}" for v in moderate[:2])
             parts.append(
-                rf"As vari\'aveis {names} demonstraram \\textbf{{correla\c{{c}}\\~{{a}}o "
-                rf"moderada}} ($0{{,}}50 \\leq |r| < 0{{,}}70$), devendo ser "
+                rf"As vari\'aveis {names} demonstraram \textbf{{correla\c{{c}}\~{{a}}o "
+                rf"moderada}} ($0{{,}}50 \leq |r| < 0{{,}}70$), devendo ser "
                 rf"inclu\'idas no planejamento de experimentos controlados (DOE) "
-                rf"para confirma\c{{c}}\\~{{a}}o do efeito causal. "
+                rf"para confirma\c{{c}}\~{{a}}o do efeito causal. "
             )
 
         parts.append(
@@ -386,13 +386,13 @@ class InterpretationEngine:
 
         n = len(violations)
         return (
-            rf"Foram detectadas \\textbf{{{n} viola\\c{{c}}\\~{{o}}es}} das regras "
+            rf"Foram detectadas \textbf{{{n} viola\c{{c}}\~{{o}}es}} das regras "
             rf"de controle estat\'istico do processo (Western Electric Rules). "
-            rf"Esses eventos sinalizam \\textbf{{causas especiais de varia\\c{{c}}\\~{{a}}o}} "
+            rf"Esses eventos sinalizam \textbf{{causas especiais de varia\c{{c}}\~{{a}}o}} "
             rf"que devem ser investigadas de forma imediata pela equipe de processo. "
-            rf"A presen\\c{{c}}a de causas especiais invalida a interpreta\\c{{c}}\\~{{a}}o "
+            rf"A presen\c{{c}}a de causas especiais invalida a interpreta\c{{c}}\~{{a}}o "
             rf"dos \'indices de capacidade $C_p$ e $C_{{pk}}$, pois esses "
-            rf"press-up\\~{{o}}em processo sob controle estat\'istico."
+            rf"press-up\~{{o}}em processo sob controle estat\'istico."
         )
 
     # ── Recomendacoes automaticas ─────────────────────────────────────────────
@@ -417,7 +417,7 @@ class InterpretationEngine:
                 "action": (
                     r"Investigar causas especiais de varia\c{c}\~{a}o imediatamente. "
                     "Implementar carta de controle XmR para monitoramento cont\'inuo. "
-                    rf"Meta: elevar $C_{{pk}}$ de {_fmt(cpk, 3)} para $\\geq 1{{,}}33$."
+                    rf"Meta: elevar $C_{{pk}}$ de {_fmt(cpk, 3)} para $\geq 1{{,}}33$."
                 ),
                 "priority": 1,
             })
@@ -429,7 +429,7 @@ class InterpretationEngine:
                 "action": (
                     "Realizar estudo de variabilidade para identificar as principais "
                     r"fontes de varia\c{c}\~{a}o. Considerar DOE para otimiza\c{c}\~{a}o "
-                    rf"do processo. Meta: $C_{{pk}} \\geq 1{{,}}33$."
+                    rf"do processo. Meta: $C_{{pk}} \geq 1{{,}}33$."
                 ),
                 "priority": 2,
             })
@@ -444,7 +444,7 @@ class InterpretationEngine:
             recs.append({
                 "category": "Tratamento de Dados",
                 "action": (
-                    rf"{n_not_normal} vari\'avel(is) n\~{{a}}o seguem distribui\c{{c}}\\~{{a}}o "
+                    rf"{n_not_normal} vari\'avel(is) n\~{{a}}o seguem distribui\c{{c}}\~{{a}}o "
                     r"normal. Aplicar transforma\c{c}\~{o}es Box--Cox ou m\'etodos "
                     r"n\~{a}o param\'etricos (Kruskal--Wallis, Mann--Whitney) para "
                     r"an\'alises comparativas."
@@ -460,8 +460,8 @@ class InterpretationEngine:
             recs.append({
                 "category": "Experimento Controlado (DOE)",
                 "action": (
-                    rf"A vari\'avel \\textbf{{{_tex(top['variable'])}}} apresentou "
-                    rf"correla\c{{c}}\\~{{a}}o forte ($r = {_fmt(top.get('pearson_r'), 3)}$). "
+                    rf"A vari\'avel \textbf{{{_tex(top['variable'])}}} apresentou "
+                    rf"correla\c{{c}}\~{{a}}o forte ($r = {_fmt(top.get('pearson_r'), 3)}$). "
                     r"Conduzir experimento fatorial (2k) para confirmar causalidade "
                     r"e definir janelas operacionais \'otimas."
                 ),

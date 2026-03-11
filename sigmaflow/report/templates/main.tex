@@ -1,14 +1,56 @@
-\documentclass[12pt]{article}
+\documentclass[12pt, a4paper]{article}
 
 %% ============================================================
-%%  PACOTES
+%%  CODIFICACAO E FONTE
 %% ============================================================
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathptmx}
 \usepackage{times}
+
+%% ============================================================
+%%  PAGINA
+%% ============================================================
 \usepackage{geometry}
+\geometry{
+  a4paper,
+  top    = 3.0cm,
+  bottom = 2.5cm,
+  left   = 3.0cm,
+  right  = 2.5cm,
+  headheight = 15pt,
+  includehead,
+  includefoot
+}
+
+%% ============================================================
+%%  ESPACAMENTO E JUSTIFICACAO
+%% ============================================================
 \usepackage{setspace}
+\onehalfspacing
+
+\usepackage{ragged2e}
+\setlength{\RaggedRightParindent}{\parindent}
+
+\tolerance=800
+\emergencystretch=3em
+\hbadness=10000
+\hfuzz=2pt
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{4pt plus 1pt minus 1pt}
+
+%% ============================================================
+%%  MICROTIPIA
+%% ============================================================
+\usepackage[activate={true,nocompatibility},final,tracking=true,
+            kerning=true,spacing=true,factor=1100,
+            stretch=15,shrink=15]{microtype}
+\microtypecontext{spacing=nonfrench}
+
+%% ============================================================
+%%  PACOTES CIENTIFICOS
+%% ============================================================
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{amsmath}
@@ -18,134 +60,156 @@
 \usepackage{longtable}
 \usepackage{tabularx}
 \usepackage{multirow}
+\usepackage{colortbl}
 \usepackage{url}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{indentfirst}
 \usepackage{etoolbox}
-\usepackage{microtype}
-\usepackage{fancyhdr}
-\usepackage{titlesec}
-\usepackage{titletoc}
-\usepackage{xcolor}
-\usepackage{tcolorbox}
-\tcbuselibrary{skins, breakable}
 \usepackage{enumitem}
-\usepackage{hyperref}
-
-%% ============================================================
-%%  PAGINA
-%% ============================================================
-\geometry{a4paper, top=3cm, left=3cm, bottom=2cm, right=2cm}
-\onehalfspacing
-\setlength{\parindent}{1.25cm}
-\setlength{\parskip}{0pt}
-
-%% ============================================================
-%%  TITULOS
-%% ============================================================
-\titlespacing*{\section}      {0pt}{1\baselineskip}{1\baselineskip}
-\titlespacing*{\subsection}   {0pt}{1\baselineskip}{1\baselineskip}
-\titlespacing*{\subsubsection}{0pt}{1\baselineskip}{1\baselineskip}
-\titleformat{\section}   {\bfseries}  {\thesection\space} {0pt}{\MakeUppercase}
-\titleformat{\subsection}{\normalfont}{\thesubsection\space}{0pt}{\MakeUppercase}
-\titleformat{\subsubsection}{\bfseries\itshape}{\thesubsubsection\space}{0pt}{}
 
 %% ============================================================
 %%  CABECALHO / RODAPE
 %% ============================================================
+\usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0.4pt}
-\lhead{\small SigmaFlow v10 --- Relat\'orio DMAIC}
-\rhead{\small \thepage}
+\renewcommand{\footrulewidth}{0.2pt}
+\lhead{\small\textit{SigmaFlow v10 --- Relat\'orio DMAIC}}
+\rhead{\small\thepage}
+\cfoot{\small\textit{Gerado automaticamente --- SigmaFlow v10}}
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \rhead{\small\thepage}
+}
+
+%% ============================================================
+%%  TITULOS DE SECAO
+%% ============================================================
+\usepackage{titlesec}
+\usepackage{titletoc}
+
+\titleformat{\section}
+  {\bfseries\large}{\thesection\enspace}{0pt}{\MakeUppercase}
+\titleformat{\subsection}
+  {\bfseries\normalsize}{\thesubsection\enspace}{0pt}{}
+\titleformat{\subsubsection}
+  {\itshape\normalsize}{\thesubsubsection\enspace}{0pt}{}
+
+\titlespacing*{\section}      {0pt}{1.4\baselineskip}{0.8\baselineskip}
+\titlespacing*{\subsection}   {0pt}{1.2\baselineskip}{0.6\baselineskip}
+\titlespacing*{\subsubsection}{0pt}{1.0\baselineskip}{0.4\baselineskip}
 
 %% ============================================================
 %%  CAPTION
 %% ============================================================
-\captionsetup{labelsep=endash, justification=justified,
-              singlelinecheck=false, font=normalsize, labelfont=bf}
+\captionsetup{labelsep=endash, font=small, labelfont=bf,
+              justification=justified, singlelinecheck=false,
+              width=0.92\linewidth}
 \captionsetup[figure]{position=below, justification=centering}
 \captionsetup[table] {position=above}
-\newcommand{\fonte}[1]{\par\vspace{2pt}{\small\textbf{Fonte:} #1}}
+\newcommand{\fonte}[1]{\par\vspace{3pt}{\small\textbf{Fonte:} #1}}
 
 %% ============================================================
-%%  CAIXAS DE INSIGHT  (tcolorbox)
+%%  CORES E CAIXAS
 %% ============================================================
-\definecolor{corCritico}{RGB}{180,30,30}
-\definecolor{corAviso}  {RGB}{200,130,0}
-\definecolor{corInfo}   {RGB}{30,100,170}
+\usepackage{xcolor}
+\definecolor{corCritico}{RGB}{175,30,30}
+\definecolor{corAviso}  {RGB}{190,120,0}
+\definecolor{corInfo}   {RGB}{25,90,160}
 \colorlet{critico}{corCritico}
 \colorlet{aviso}  {corAviso}
 \colorlet{info}   {corInfo}
 
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
 \tcbset{
   insightbase/.style={
     breakable, enhanced, boxrule=0.8pt, arc=4pt,
-    left=6pt, right=6pt, top=4pt, bottom=4pt,
-    fonttitle=\bfseries\small
+    left=8pt, right=8pt, top=5pt, bottom=5pt,
+    fonttitle=\bfseries\small,
+    before upper={\setlength{\parskip}{3pt}\justifying}
   }
 }
 \newtcolorbox{insightcritico}[1][]{insightbase,
-  colback=red!5, colframe=corCritico, title={Achado Cr\'itico}, #1}
+  colback=red!4!white, colframe=corCritico, title={Achado Cr\'itico}, #1}
 \newtcolorbox{insightaviso}[1][]{insightbase,
-  colback=orange!5, colframe=corAviso, title={Aviso}, #1}
+  colback=orange!5!white, colframe=corAviso, title={Aviso}, #1}
 \newtcolorbox{insightinfo}[1][]{insightbase,
-  colback=blue!5, colframe=corInfo, title={Informa\c{c}\~ao}, #1}
+  colback=blue!4!white, colframe=corInfo, title={Informa\c{c}\~ao}, #1}
 
 %% ============================================================
-%%  HYPERREF
+%%  COLUNAS DE TABELA UTILITARIAS
 %% ============================================================
+{% raw %}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+{% endraw %}
+
+%% ============================================================
+%%  HYPERREF (sempre por ultimo)
+%% ============================================================
+\usepackage{hyperref}
 \hypersetup{
-  colorlinks=true,
-  linkcolor=corInfo,
-  urlcolor=corInfo,
-  citecolor=gray,
-  pdfauthor={SigmaFlow v10},
-  pdftitle={Relat\'orio DMAIC --- {{ meta.dataset_name }}},
-  pdfsubject={Analise DMAIC Automatizada}
+  colorlinks  = true,
+  linkcolor   = black,
+  urlcolor    = corInfo,
+  citecolor   = gray,
+  pdfauthor   = {SigmaFlow v10},
+  pdftitle    = {Relatorio DMAIC},
+  pdfsubject  = {Analise DMAIC Automatizada},
+  breaklinks  = true
 }
+
+%% Renomear "Contents" para "Sumario" --- override direto
+\renewcommand{\contentsname}{Sum\'ario}
 
 %% ============================================================
 %%                        DOCUMENTO
 %% ============================================================
 \begin{document}
+\justifying
 
 %% ----- CAPA -----
 \begin{titlepage}
   \begin{center}
-    \vspace*{1.5cm}
-    {\large\bfseries RELATORIO TECNICO\\[0.3cm]
-     ANALISE LEAN SIX SIGMA --- FRAMEWORK DMAIC}\\[2cm]
-
-    {\LARGE\bfseries {{ meta.title }}}\\[1.5cm]
-
-    {\large\textbf{Dataset analisado:} {{ meta.dataset_name }}}\\[0.5cm]
-    {\large\textbf{Tipo detectado:} {{ meta.dataset_type | upper }}}\\[0.5cm]
-    {\large\textbf{Dimens\~{o}es:} {{ meta.n_rows }} observa\c{c}\~{o}es $\times$ {{ meta.n_cols }} vari\'aveis}\\[1.5cm]
-
+    \vspace*{2cm}
+    {\large\bfseries RELAT\'ORIO T\'ECNICO}\\[0.3cm]
+    {\normalsize AN\'ALISE LEAN SIX SIGMA --- FRAMEWORK DMAIC}\\[2cm]
+    \rule{0.8\linewidth}{0.4pt}\\[0.6cm]
+    {\LARGE\bfseries {{ meta.title }}}\\[0.4cm]
+    \rule{0.8\linewidth}{0.4pt}\\[1.8cm]
+    \begin{tabular}{rl}
+      \textbf{Dataset:}       & {{ meta.dataset_name }} \\[0.3cm]
+      \textbf{Tipo:}          & {{ meta.dataset_type | upper }} \\[0.3cm]
+      \textbf{Dimens\~{o}es:} & {{ meta.n_rows }} obs.\ $\times$ {{ meta.n_cols }} vari\'aveis \\
+    \end{tabular}\\[2cm]
     \vfill
-    {\normalsize {{ meta.organization }}}\\[0.4cm]
-    {\normalsize Gerado automaticamente pelo \textbf{SigmaFlow v10}}\\[0.3cm]
-    {\normalsize {{ meta.date }}}
+    {\normalsize\textbf{ {{ meta.organization }} }}\\[0.5cm]
+    {\small Gerado automaticamente pelo \textbf{SigmaFlow v10}}\\[0.3cm]
+    {\small {{ meta.date }}}
   \end{center}
 \end{titlepage}
 
 %% ----- RESUMO -----
 \begin{abstract}
-{{ abstract }}
+\noindent {{ abstract }}
 \end{abstract}
-
 \newpage
 
 %% ----- SUMARIO -----
-\tableofcontents
+{\hypersetup{linkcolor=black}\tableofcontents}
 \newpage
 
 %% ============================================================
 %%  SECOES
 %% ============================================================
+\input{sections/executive_summary}
 \input{sections/intro}
+\input{sections/detection}
 \input{sections/dataset}
 \input{sections/metodologia}
 \input{sections/measure}
@@ -153,6 +217,7 @@
 \input{sections/improve}
 \input{sections/control}
 \input{sections/results}
+\input{sections/key_insights}
 \input{sections/discussion}
 \input{sections/conclusion}
 

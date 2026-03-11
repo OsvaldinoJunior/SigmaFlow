@@ -59,17 +59,188 @@ class SectionBuilder:
     def build_all(self) -> Dict[str, Dict[str, Any]]:
         """Retorna contexto completo para todas as secoes + main."""
         return {
-            "main":       self.build_main(),
-            "intro":      self.build_intro(),
-            "dataset":    self.build_dataset(),
-            "metodologia":self.build_metodologia(),
-            "measure":    self.build_measure(),
-            "analyze":    self.build_analyze(),
-            "improve":    self.build_improve(),
-            "control":    self.build_control(),
-            "results":    self.build_results(),
-            "discussion": self.build_discussion(),
-            "conclusion": self.build_conclusion(),
+            "main":              self.build_main(),
+            "executive_summary": self.build_executive_summary(),
+            "intro":             self.build_intro(),
+            "detection":         self.build_detection(),
+            "dataset":           self.build_dataset(),
+            "metodologia":       self.build_metodologia(),
+            "measure":           self.build_measure(),
+            "analyze":           self.build_analyze(),
+            "improve":           self.build_improve(),
+            "control":           self.build_control(),
+            "results":           self.build_results(),
+            "key_insights":      self.build_key_insights(),
+            "discussion":        self.build_discussion(),
+            "conclusion":        self.build_conclusion(),
+        }
+
+    # ── Executive Summary ─────────────────────────────────────────────────────
+
+    def build_executive_summary(self) -> Dict[str, Any]:
+        """Constroi contexto para o Sumario Executivo."""
+        exec_sum  = self.r.get("executive_summary", "")
+        risk_lv   = self.r.get("risk_level", "info")
+        risk_lb   = self.r.get("risk_label", r"BAIXO")
+        risk_col  = self.r.get("risk_color", "corInfo")
+        insights  = self.r.get("analysis_insights", [])
+
+        n_critical = sum(1 for i in insights if i.get("severity") == "critical")
+        n_warning  = sum(1 for i in insights if i.get("severity") == "warning")
+
+        # Fallback: gerar executive summary se nao veio do engine
+        if not exec_sum:
+            from sigmaflow.insights.insight_engine        import InsightEngine
+            from sigmaflow.insights.recommendation_engine import RecommendationEngine
+            ai  = InsightEngine().generate(self.r)
+            rec = RecommendationEngine(self.r, ai)
+            exec_sum  = rec.executive_summary()
+            risk_lv   = rec.risk_level()
+            risk_lb   = rec.risk_label()
+            risk_col  = rec.risk_color()
+            n_critical = sum(1 for i in ai if i.severity == "critical")
+            n_warning  = sum(1 for i in ai if i.severity == "warning")
+
+        return {
+            "executive_summary": {
+                "text":         exec_sum,
+                "risk_level":   risk_lv,
+                "risk_label":   risk_lb,
+                "risk_color":   risk_col,
+                "n_insights":   len(insights),
+                "n_critical":   n_critical,
+                "n_warning":    n_warning,
+                "has_critical": n_critical > 0,
+                "has_warning":  n_warning > 0,
+            }
+        }
+
+    # ── Key Insights & Recommendations ───────────────────────────────────────
+
+    def build_key_insights(self) -> Dict[str, Any]:
+        """Constroi contexto para a secao de Insights e Recomendacoes."""
+        insights = self.r.get("analysis_insights", [])
+        recs     = self.r.get("recommendations", [])
+
+        # Fallback
+        if not insights:
+            from sigmaflow.insights.insight_engine        import InsightEngine
+            from sigmaflow.insights.recommendation_engine import RecommendationEngine
+            ai   = InsightEngine().generate(self.r)
+            rec  = RecommendationEngine(self.r, ai)
+            insights = [i.as_dict() for i in ai]
+            recs     = rec.prioritized_recommendations()
+
+        return {
+            "key_insights": {
+                "insights":          insights,
+                "has_insights":      bool(insights),
+                "recommendations":   recs,
+                "has_recommendations": bool(recs),
+                "n_total":           len(insights),
+            }
+        }
+
+    # ── Detection section (Problem Identification) ────────────────────────────
+
+    def build_detection(self) -> Dict[str, Any]:
+        """
+        Constroi o contexto para a secao de Identificacao Automatica do Problema.
+        Alimentada pelos dados do ProblemDetector e AnalysisSelector.
+        """
+        det   = self.r.get("detection", {})
+        plan  = self.r.get("analysis_plan", {})
+
+        problems  = det.get("problems", [])
+        primary   = det.get("primary_problem", "exploratory")
+        response  = det.get("response_variable") or self._meta.get("primary_target", "N/A")
+        features  = det.get("feature_variables", [])
+        rationale = det.get("rationale", {})
+        confidence= det.get("confidence", {})
+
+        # Problem display names
+        _labels = {
+            "spc":        r"Controle Estat'istico de Processos (SPC)",
+            "capability": r"An'alise de Capacidade do Processo",
+            "regression": r"Regress\~{a}o e Correla\c{c}\~{a}o Multivariada",
+            "anova":      r"An'alise de Vari\^{a}ncia (ANOVA)",
+            "pareto":     r"An'alise de Pareto",
+            "msa":        r"An'alise do Sistema de Medi\c{c}\~{a}o (MSA/Gauge R\&R)",
+            "fmea":       r"An'alise de Modo e Efeito de Falha (FMEA)",
+            "doe":        r"Delineamento de Experimentos (DOE)",
+            "exploratory":r"An'alise Explorat'oria de Dados",
+        }
+
+        problem_rows = []
+        for p in problems:
+            conf = confidence.get(p, 0.0)
+            reasons = rationale.get(p, [])
+            problem_rows.append({
+                "label":      _labels.get(p, _tex(p).title()),
+                "id":         p.upper(),
+                "confidence": rf"{conf*100:.0f}\%",
+                "reason":     _tex(reasons[0]) if reasons else "---",
+            })
+
+        # Selected analyses flat list for display
+        all_analyses = []
+        for tokens in plan.values():
+            for t in tokens:
+                label = _tex(t.replace("_", " ").title())
+                if label not in all_analyses:
+                    all_analyses.append(label)
+
+        # Build opening paragraph
+        if len(problems) == 1:
+            prob_str = rf"\textbf{{{_labels.get(problems[0], problems[0])}}}"
+            opening = (
+                rf"O motor de detec\c{{c}}\~{{a}}o autom'atica do SigmaFlow analisou "
+                rf"a estrutura do dataset \textbf{{{_tex(self.name)}}} e identificou "
+                rf"o seguinte tipo de problema estat'istico: {prob_str}. "
+            )
+        else:
+            labs = ", ".join(
+                rf"\textbf{{{_labels.get(p, p)}}}"
+                for p in problems
+            )
+            opening = (
+                rf"O motor de detec\c{{c}}\~{{a}}o autom'atica do SigmaFlow analisou "
+                rf"a estrutura do dataset \textbf{{{_tex(self.name)}}} e identificou "
+                rf"os seguintes tipos de problema estat'istico: {labs}. "
+            )
+
+        opening += (
+            r"Com base nessa detec\c{c}\~{a}o, o sistema selecionou automaticamente "
+            r"as t'ecnicas anal'iticas mais adequadas e configurou o pipeline "
+            r"DMAIC correspondente."
+        )
+
+        primary_label = _labels.get(primary, primary)
+        snap = det.get("metadata_snapshot", {})
+
+        return {
+            "detection": {
+                "opening":        opening,
+                "primary_label":  primary_label,
+                "primary_id":     primary.upper(),
+                "response":       _tex(str(response)),
+                "features":       [_tex(f) for f in features[:8]],
+                "has_features":   bool(features),
+                "problem_rows":   problem_rows,
+                "has_problems":   bool(problem_rows),
+                "all_analyses":   all_analyses[:16],
+                "has_analyses":   bool(all_analyses),
+                "n_rows":         snap.get("n_rows", "N/A"),
+                "n_num":          snap.get("n_num", "N/A"),
+                "n_cat":          snap.get("n_cat", "N/A"),
+                "has_time":       snap.get("has_time", False),
+                "has_spec":       snap.get("has_spec", False),
+                "plan_phases": {
+                    phase: [_tex(t.replace("_", " ").title()) for t in tokens]
+                    for phase, tokens in plan.items()
+                    if tokens
+                },
+            }
         }
 
     # ── main.tex ─────────────────────────────────────────────────────────────
@@ -105,23 +276,23 @@ class SectionBuilder:
                 "opening": (
                     rf"O presente relat\'orio documenta os resultados de uma an\'alise "
                     rf"estat\'istica automatizada conduzida pelo sistema "
-                    rf"\\textbf{{SigmaFlow v10}}, aplicando o \\textit{{framework}} "
-                    rf"DMAIC (\\textit{{Define, Measure, Analyze, Improve, Control}}) "
-                    rf"ao conjunto de dados denominado \\textbf{{{_tex(self.name)}}}. "
-                    rf"O DMAIC constitui a metodologia estruturada de resolu\c{{c}}\\~{{a}}o "
+                    rf"\textbf{{SigmaFlow v10}}, aplicando o \textit{{framework}} "
+                    rf"DMAIC (\textit{{Define, Measure, Analyze, Improve, Control}}) "
+                    rf"ao conjunto de dados denominado \textbf{{{_tex(self.name)}}}. "
+                    rf"O DMAIC constitui a metodologia estruturada de resolu\c{{c}}\~{{a}}o "
                     rf"de problemas do Lean Six Sigma, amplamente utilizada em projetos "
                     rf"de melhoria de processos industriais, de servi\c{{c}}os e "
                     rf"log\'isticos (Montgomery, 2009)."
                 ),
                 "dataset_description": (
-                    rf"O dataset submetido \\`{{a}} an\'alise \'e composto por "
-                    rf"\\textbf{{{n_rows} observa\c{{c}}\\~{{o}}es}} e "
-                    rf"\\textbf{{{n_cols} vari\'aveis}}, das quais {n_num} s\\~{{a}}o "
-                    rf"de natureza num\'erica cont\'inua e {n_cat} s\\~{{a}}o categ\'oricas. "
+                    rf"O dataset submetido \`{{a}} an\'alise \'e composto por "
+                    rf"\textbf{{{n_rows} observa\c{{c}}\~{{o}}es}} e "
+                    rf"\textbf{{{n_cols} vari\'aveis}}, das quais {n_num} s\~{{a}}o "
+                    rf"de natureza num\'erica cont\'inua e {n_cat} s\~{{a}}o categ\'oricas. "
                     rf"A vari\'avel de interesse prim\'ario identificada automaticamente "
-                    rf"pelo SigmaFlow foi \\textbf{{{target}}}, sobre a qual foram "
+                    rf"pelo SigmaFlow foi \textbf{{{target}}}, sobre a qual foram "
                     rf"concentrados os esfor\c{{c}}os anal\'iticos das fases de "
-                    rf"Medi\c{{c}}\\~{{a}}o e An\'alise."
+                    rf"Medi\c{{c}}\~{{a}}o e An\'alise."
                 ),
                 "objective": (
                     r"O objetivo central desta an\'alise \'e caracterizar o desempenho "
@@ -136,7 +307,7 @@ class SectionBuilder:
                 ),
                 "pipeline_note": (
                     rf"Todo o pipeline anal\'itico foi executado em "
-                    rf"\\textbf{{{elapsed} segundos}}, cobrindo as cinco fases do "
+                    rf"\textbf{{{elapsed} segundos}}, cobrindo as cinco fases do "
                     rf"ciclo DMAIC de forma integrada e reprodut\'ivel."
                 ),
             }
@@ -175,19 +346,19 @@ class SectionBuilder:
         if miss_pct and float(miss_pct) > 0:
             miss_text = (
                 rf"Foram identificados {_fmt(miss_pct, 1)}\\% de valores ausentes "
-                rf"no conjunto de dados, fato que requer aten\c{{c}}\\~{{a}}o na "
-                rf"interpreta\c{{c}}\\~{{a}}o dos resultados."
+                rf"no conjunto de dados, fato que requer aten\c{{c}}\~{{a}}o na "
+                rf"interpreta\c{{c}}\~{{a}}o dos resultados."
             )
 
         return {
             "dataset": {
                 "scope_text": (
                     rf"O presente projeto de an\'alise tem como objeto o processo "
-                    rf"representado pelo dataset \\textbf{{{_tex(self.name)}}}, "
+                    rf"representado pelo dataset \textbf{{{_tex(self.name)}}}, "
                     rf"classificado pelo SigmaFlow como do tipo "
-                    rf"\\textbf{{{_tex(self.dtype).upper()}}}. "
+                    rf"\textbf{{{_tex(self.dtype).upper()}}}. "
                     rf"A vari\'avel-resposta primaria identificada \'e "
-                    rf"\\textbf{{{target}}}, em torno da qual foram estruturadas "
+                    rf"\textbf{{{target}}}, em torno da qual foram estruturadas "
                     rf"as hip\'oteses de causa raiz e os \'indices de desempenho."
                 ),
                 "profile_text": (
@@ -239,11 +410,11 @@ class SectionBuilder:
                 ),
                 "phases": phases,
                 "planning_text": (
-                    rf"Na fase de Defini\c{{c}}\\~{{a}}o, o perfil do dataset foi "
-                    rf"constru\'ido pelo m\'odulo \\texttt{{DataProfiler}}, que "
+                    rf"Na fase de Defini\c{{c}}\~{{a}}o, o perfil do dataset foi "
+                    rf"constru\'ido pelo m\'odulo \texttt{{DataProfiler}}, que "
                     rf"identificou automaticamente tipos de vari\'aveis, dados "
                     rf"ausentes e a vari\'avel-resposta principal "
-                    rf"(\\textbf{{{target}}}). O m\'odulo \\texttt{{AnalysisPlanner}} "
+                    rf"(\textbf{{{target}}}). O m\'odulo \texttt{{AnalysisPlanner}} "
                     rf"selecionou os m\'etodos estat\'isticos mais adequados."
                 ),
                 "normality_text": (
@@ -356,7 +527,7 @@ class SectionBuilder:
                 "normality_interpretation": self.ie.interpret_normality(norm),
                 "capability_text": (
                     rf"A an\'alise de capacidade foi conduzida com base na vari\'avel "
-                    rf"\\textbf{{{target}}}."
+                    rf"\textbf{{{target}}}."
                 ),
                 "has_capability_table": cpk is not None,
                 "target": target,
@@ -394,9 +565,9 @@ class SectionBuilder:
             sr  = v.get("spearman_r", 0)
             st  = v.get("strength", "fraca").capitalize()
             pearson_tex = (
-                rf"\\textcolor{{critico}}{{\\textbf{{{_fmt(pr, 3)}}}}}"
+                rf"\textcolor{{critico}}{{\textbf{{{_fmt(pr, 3)}}}}}"
                 if abs(pr) >= 0.70 else
-                rf"\\textcolor{{aviso}}{{\\textbf{{{_fmt(pr, 3)}}}}}"
+                rf"\textcolor{{aviso}}{{\textbf{{{_fmt(pr, 3)}}}}}"
                 if abs(pr) >= 0.50 else
                 _fmt(pr, 3)
             )
@@ -427,8 +598,8 @@ class SectionBuilder:
         reg_text = ""
         if r2 is not None:
             reg_text = (
-                rf"O modelo de regress\\~{{a}}o m\'ultipla explicou "
-                rf"\\textbf{{{_fmt(r2*100, 1)}\\%}} da vari\\^{{a}}ncia da "
+                rf"O modelo de regress\~{{a}}o m\'ultipla explicou "
+                rf"\textbf{{{_fmt(r2*100, 1)}\\%}} da vari\^{{a}}ncia da "
                 rf"vari\'avel-resposta ($R^2 = {_fmt(r2, 4)}$). "
             )
             if r2 >= 0.7:
@@ -487,8 +658,8 @@ class SectionBuilder:
             resp    = doe.get("response", "N/A")
             doe_text = (
                 rf"O m\'odulo DOE aplicou an\'alise fatorial sobre "
-                rf"{len(factors)} fator(es) (\\textbf{{{', '.join(_tex(f) for f in factors[:4])}}}) "
-                rf"com vari\'avel-resposta \\textbf{{{_tex(resp)}}}. "
+                rf"{len(factors)} fator(es) (\textbf{{{', '.join(_tex(f) for f in factors[:4])}}}) "
+                rf"com vari\'avel-resposta \textbf{{{_tex(resp)}}}. "
                 r"Os efeitos principais e intera\c{c}\~{o}es foram avaliados "
                 r"por ANOVA com n\'ivel de signific\^{a}ncia de 5\%."
             )
@@ -649,15 +820,15 @@ class SectionBuilder:
 
         rca_para = ""
         if top_vars:
-            vars_fmt = ", ".join(rf"\\textbf{{{_tex(v)}}}" for v in top_vars)
+            vars_fmt = ", ".join(rf"\textbf{{{_tex(v)}}}" for v in top_vars)
             rca_para = (
-                rf"A an\'alise de correla\c{{c}}\\~{{a}}o identificou {vars_fmt} "
-                rf"como as vari\'aveis de maior associa\c{{c}}\\~{{a}}o estat\'istica "
-                rf"com \\textbf{{{target}}}. Esses resultados sugerem que "
-                rf"interven\c{{c}}\\~{{o}}es nesses fatores t\\^{{e}}m o maior "
+                rf"A an\'alise de correla\c{{c}}\~{{a}}o identificou {vars_fmt} "
+                rf"como as vari\'aveis de maior associa\c{{c}}\~{{a}}o estat\'istica "
+                rf"com \textbf{{{target}}}. Esses resultados sugerem que "
+                rf"interven\c{{c}}\~{{o}}es nesses fatores t\^{{e}}m o maior "
                 rf"potencial de impacto na melhoria da qualidade do processo. "
-                rf"Ressalta-se que correla\c{{c}}\\~{{a}}o estat\'istica n\\~{{a}}o "
-                rf"implica causalidade; a conduc\\~{{a}}o de experimentos controlados "
+                rf"Ressalta-se que correla\c{{c}}\~{{a}}o estat\'istica n\~{{a}}o "
+                rf"implica causalidade; a conduc\~{{a}}o de experimentos controlados "
                 rf"(DOE) \'e recomendada para confirmar as hip\'oteses levantadas "
                 r"(Montgomery; Runger, 2014)."
             )
@@ -702,40 +873,40 @@ class SectionBuilder:
             verdict = self.ie.cpk_verdict(cpk)
             cap_line = (
                 rf"O \'indice de capacidade $C_{{pk}} = {_fmt(cpk, 3)}$ "
-                rf"classificou o processo como \\textbf{{{verdict}}}. "
+                rf"classificou o processo como \textbf{{{verdict}}}. "
             )
             if sig_lv:
                 cap_line += (
                     rf"O n\'ivel sigma estimado \'e de "
-                    rf"\\textbf{{{_fmt(sig_lv, 2)}$\\sigma$}}. "
+                    rf"\textbf{{{_fmt(sig_lv, 2)}$\sigma$}}. "
                 )
 
         return {
             "conclusion": {
                 "summary": (
                     rf"O presente estudo aplicou o ciclo DMAIC de forma "
-                    rf"automatizada ao dataset \\textbf{{{_tex(self.name)}}}, "
-                    rf"composto por {n_rows} observa\c{{c}}\\~{{o}}es e "
-                    rf"{n_cols} vari\'aveis. A execu\c{{c}}\\~{{a}}o completa "
+                    rf"automatizada ao dataset \textbf{{{_tex(self.name)}}}, "
+                    rf"composto por {n_rows} observa\c{{c}}\~{{o}}es e "
+                    rf"{n_cols} vari\'aveis. A execu\c{{c}}\~{{a}}o completa "
                     rf"do pipeline anal\'itico --- incluindo profiling, "
-                    rf"an\'alise estat\'istica, gera\c{{c}}\\~{{a}}o de gr\'aficos "
-                    rf"e produ\c{{c}}\\~{{a}}o deste relat\'orio --- foi conclu\'ido "
-                    rf"em \\textbf{{{elapsed} segundos}}, demonstrando a efici\\^{{e}}ncia "
-                    rf"do SigmaFlow para suporte \\`{{a}} tomada de decis\\~{{a}}o."
+                    rf"an\'alise estat\'istica, gera\c{{c}}\~{{a}}o de gr\'aficos "
+                    rf"e produ\c{{c}}\~{{a}}o deste relat\'orio --- foi conclu\'ido "
+                    rf"em \textbf{{{elapsed} segundos}}, demonstrando a efici\^{{e}}ncia "
+                    rf"do SigmaFlow para suporte \`{{a}} tomada de decis\~{{a}}o."
                 ),
                 "capability_line": cap_line,
                 "insights_line": (
-                    rf"No total, \\textbf{{{n_ins} \\textit{{insights}} estat\'isticos}} "
+                    rf"No total, \textbf{{{n_ins} \textit{{insights}} estat\'isticos}} "
                     rf"foram gerados ao longo das fases do DMAIC, sinalizando "
-                    rf"aspectos cr\'iticos que requerem aten\c{{c}}\\~{{a}}o da "
+                    rf"aspectos cr\'iticos que requerem aten\c{{c}}\~{{a}}o da "
                     rf"equipe de engenharia."
                 ),
                 "rca_line": (
-                    rf"A an\'alise de causa raiz por correla\c{{c}}\\~{{a}}o "
+                    rf"A an\'alise de causa raiz por correla\c{{c}}\~{{a}}o "
                     rf"multivariada identificou as vari\'aveis de maior impacto "
-                    rf"sobre \\textbf{{{target}}}, fornecendo subs\'idios para "
+                    rf"sobre \textbf{{{target}}}, fornecendo subs\'idios para "
                     rf"o planejamento de experimentos controlados e a "
-                    rf"prioriza\c{{c}}\\~{{a}}o de a\c{{c}}\\~{{o}}es corretivas."
+                    rf"prioriza\c{{c}}\~{{a}}o de a\c{{c}}\~{{o}}es corretivas."
                 ),
                 "final_statement": (
                     r"Conclui-se que o SigmaFlow automatizou, de forma rigorosa "

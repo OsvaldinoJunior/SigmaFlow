@@ -1,0 +1,79 @@
+\section{Identifica\c{c}\~{a}o Autom\'atica do Problema}
+
+{{ detection.opening }}
+
+\subsection{Tipos de Problema Detectados}
+
+{% if detection.has_problems %}
+\begin{table}[H]
+\caption{Problemas estat\'isticos identificados automaticamente}
+\label{tab:detection}
+\centering
+\begin{tabular}{p{6.5cm}ccp{5cm}}
+\toprule
+\textbf{Tipo de Problema} & \textbf{ID} & \textbf{Confian\c{c}a} & \textbf{Crit\'erio de Detec\c{c}\~{a}o} \\
+\midrule
+{% for row in detection.problem_rows %}
+{{ row.label }} & \texttt{ {{- row.id -}} } & {{ row.confidence }} & {{ row.reason }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 --- motor de detec\c{c}\~{a}o autom\'atica}
+\end{table}
+{% endif %}
+
+O problema prim\'ario identificado \'e \textbf{ {{- detection.primary_label -}} }
+(\texttt{ {{- detection.primary_id -}} }), que orienta a sele\c{c}\~{a}o das t\'ecnicas
+anal\'iticas mais relevantes para o contexto do dataset.
+
+\subsection{Vari\'avel Resposta e Vari\'aveis Explicativas}
+
+O sistema identificou automaticamente a vari\'avel resposta (Y) como
+\textbf{ {{- detection.response -}} }, sobre a qual concentram-se os esfor\c{c}os
+de an\'alise e otimiza\c{c}\~{a}o do processo.
+
+{% if detection.has_features %}
+As vari\'aveis explicativas (X) candidatas identificadas s\~{a}o:
+\begin{itemize}
+{% for feat in detection.features %}
+\item \textbf{ {{- feat -}} }
+{% endfor %}
+\end{itemize}
+
+Essas vari\'aveis ser\~{a}o avaliadas nas fases de An\'alise e Melhoria do ciclo
+DMAIC para identifica\c{c}\~{a}o das causas raiz de variabilidade no processo.
+{% endif %}
+
+\subsection{Informa\c{c}\~{o}es Estruturais do Dataset}
+
+O dataset apresenta as seguintes caracter\'isticas estruturais que orientaram
+a detec\c{c}\~{a}o:
+
+\begin{itemize}
+\item \textbf{Observa\c{c}\~{o}es}: {{ detection.n_rows }}
+\item \textbf{Vari\'aveis num\'ericas}: {{ detection.n_num }}
+\item \textbf{Vari\'aveis categ\'oricas}: {{ detection.n_cat }}
+\item \textbf{S\'erie temporal / coluna de tempo}:
+  {% if detection.has_time %}\textcolor{info}{\textbf{sim}}{% else %}n\~{a}o{% endif %}
+\item \textbf{Limites de especifica\c{c}\~{a}o (USL/LSL)}:
+  {% if detection.has_spec %}\textcolor{info}{\textbf{sim}}{% else %}n\~{a}o detectados{% endif %}
+\end{itemize}
+
+\subsection{An\'alises Selecionadas Automaticamente}
+
+{% if detection.has_analyses %}
+Com base nos problemas detectados, o SigmaFlow selecionou as seguintes
+t\'ecnicas anal\'iticas para execu\c{c}\~{a}o no pipeline DMAIC:
+
+{% for phase, analyses in detection.plan_phases.items() %}
+\textbf{ {{- phase | upper -}} }: {{ analyses | join(', ') }}.
+
+{% endfor %}
+{% endif %}
+
+\begin{insightinfo}
+O pipeline DMAIC \'e adaptado automaticamente a cada execu\c{c}\~{a}o.
+Quando a estrutura do dataset mudar (novas colunas, novos tipos de dados,
+limites de especifica\c{c}\~{a}o informados), o motor de detec\c{c}\~{a}o
+reconfigura as an\'alises sem nenhuma altera\c{c}\~{a}o manual.
+\end{insightinfo}

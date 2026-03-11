@@ -194,7 +194,92 @@ class LatexEngine:
         primary_rca    = primary.get("root_cause", {})
         primary_target = primary_rca.get("target_col", "")
 
+        # Aggregate detection results from all datasets
+        all_problems: list = []
+        seen_p: set = set()
+        for r in self.all_results:
+            for p in r.get("detection", {}).get("problems", []):
+                if p not in seen_p:
+                    seen_p.add(p)
+                    all_problems.append(p)
+
+        merged_confidence: dict = {}
+        merged_rationale: dict  = {}
+        merged_plan: dict       = {}
+        for r in self.all_results:
+            det = r.get("detection", {})
+            merged_confidence.update(det.get("confidence", {}))
+            merged_rationale.update(det.get("rationale", {}))
+            for phase, tokens in r.get("analysis_plan", {}).items():
+                if phase not in merged_plan:
+                    merged_plan[phase] = []
+                for t in tokens:
+                    if t not in merged_plan[phase]:
+                        merged_plan[phase].append(t)
+
+        merged_detection = {
+            "problems":          all_problems,
+            "primary_problem":   all_problems[0] if all_problems else "exploratory",
+            "response_variable": primary_target,
+            "feature_variables": [
+                v["variable"]
+                for v in best_rca.get("ranked_variables", [])
+            ],
+            "confidence":  merged_confidence,
+            "rationale":   merged_rationale,
+            "metadata_snapshot": {
+                "n_rows":  total_rows,
+                "n_num":   len([v["variable"] for v in best_rca.get("ranked_variables", [])]),
+                "n_cat":   0,
+                "has_time": any(r.get("detection", {}).get("metadata_snapshot", {}).get("has_time")
+                                for r in self.all_results),
+                "has_spec": any(r.get("detection", {}).get("metadata_snapshot", {}).get("has_spec")
+                                for r in self.all_results),
+            },
+        }
+
+        # ── Merge InsightEngine results ──────────────────────────────────────
+        all_ai: list = []
+        for r in self.all_results:
+            all_ai.extend(r.get("analysis_insights", []))
+
+        # Consolidate executive summary + risk from worst dataset
+        risk_order = {"critical": 0, "warning": 1, "info": 2}
+        worst = sorted(
+            self.all_results,
+            key=lambda r: risk_order.get(r.get("risk_level", "info"), 2)
+        )
+        worst_result = worst[0] if worst else {}
+
+        merged_exec_summary  = worst_result.get("executive_summary", "")
+        merged_risk_level    = worst_result.get("risk_level", "info")
+        merged_risk_label    = worst_result.get("risk_label", r"BAIXO")
+        merged_risk_color    = worst_result.get("risk_color", "corInfo")
+
+        # Merge all recommendations, dedup by action text
+        all_recs: list = []
+        seen_actions: set = set()
+        for r in sorted(self.all_results,
+                        key=lambda r: risk_order.get(r.get("risk_level","info"),2)):
+            for rec in r.get("recommendations", []):
+                key = rec.get("action", "")[:60]
+                if key not in seen_actions:
+                    seen_actions.add(key)
+                    all_recs.append(rec)
+
+        # Re-number priorities
+        for i, rec in enumerate(all_recs, 1):
+            rec["priority"] = i
+
         return {
+            "detection":          merged_detection,
+            "analysis_plan":      merged_plan,
+            "analysis_insights":  all_ai,
+            "executive_summary":  merged_exec_summary,
+            "recommendations":    all_recs,
+            "risk_level":         merged_risk_level,
+            "risk_label":         merged_risk_label,
+            "risk_color":         merged_risk_color,
             "metadata": {
                 "n_rows":             total_rows,
                 "n_columns":          total_cols,

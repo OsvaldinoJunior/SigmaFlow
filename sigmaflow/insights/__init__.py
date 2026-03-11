@@ -1,18 +1,15 @@
 """
 sigmaflow.insights
 ==================
-Rules engine for generating structured, severity-ranked insights.
+Modulo de geracao automatica de insights e recomendacoes.
 
-The RulesEngine evaluates a set of statistical rules against analysis
-results and returns a list of Insight objects, each containing:
-  - rule         : unique rule identifier
-  - description  : human-readable finding
-  - meaning      : statistical interpretation
-  - recommendation : suggested action
-  - severity     : "info" | "warning" | "critical"
-
-Modules
+Modulos
 -------
-rules_engine      : Central orchestrator (RulesEngine, Insight)
-statistical_rules : Concrete rule implementations (Western Electric, etc.)
+rules_engine          : RulesEngine / Insight — regras Western Electric, Capability, Trend
+statistical_rules     : WesternElectricRules, CapabilityRules, TrendRules
+insight_engine        : InsightEngine — interpreta cada tipo de analise
+recommendation_engine : RecommendationEngine — executive summary e recomendacoes
 """
+from sigmaflow.insights.rules_engine          import RulesEngine, Insight          # noqa
+from sigmaflow.insights.insight_engine        import InsightEngine, AnalysisInsight # noqa
+from sigmaflow.insights.recommendation_engine import RecommendationEngine            # noqa
