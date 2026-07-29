@@ -1,0 +1,23 @@
+\section{Fase Control --- Controle}
+
+{{ control.intro }}
+
+\subsection{Cartas de Controle Avan\c{c}adas}
+
+{{ control.spc_text }}
+
+{% if control.has_violations %}
+\subsection{Viola\c{c}\~{o}es das Regras de Controle}
+
+{{ control.violations_text }}
+
+\begin{itemize}
+{% for v in control.violations %}
+\item {{ v }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+\subsection{Plano de Monitoramento}
+
+{{ control.monitoring_plan }}

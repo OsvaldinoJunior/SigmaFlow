@@ -1,0 +1,21 @@
+\section{Discuss\~{a}o}
+
+{{ discussion.capability_para }}
+
+{{ discussion.rca_para }}
+
+{{ discussion.anomaly_para }}
+
+{{ discussion.integration_para }}
+
+{% if discussion.has_recommendations %}
+\subsection{Recomenda\c{c}\~{o}es Priorit\'arias}
+
+{{ discussion.recommendations_text }}
+
+\begin{enumerate}
+{% for rec in discussion.recommendations %}
+\item \textbf{ {{- rec.category -}} }: {{ rec.action }}
+{% endfor %}
+\end{enumerate}
+{% endif %}

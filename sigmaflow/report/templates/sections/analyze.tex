@@ -1,0 +1,51 @@
+\section{Fase Analyze --- An\'alise}
+
+{{ analyze.intro }}
+
+\subsection{An\'alise de Causa Raiz}
+
+{{ analyze.rca_intro }}
+
+{% if analyze.has_rca_table %}
+\begin{table}[H]
+\caption{Ranqueamento de vari\'aveis por correla\c{c}\~{a}o com \textbf{ {{- analyze.target -}} }}
+\label{tab:rca}
+\centering
+\begin{tabular}{p{4.5cm}ccc}
+\toprule
+\textbf{Vari\'avel} & \textbf{Pearson $r$} & \textbf{Spearman $r$} & \textbf{For\c{c}a} \\
+\midrule
+{% for row in analyze.rca_rows %}
+{{ row.variable }} & {{ row.pearson }} & {{ row.spearman }} & {{ row.strength }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 (an\'alise autom\'atica)}
+\end{table}
+{% endif %}
+
+{{ analyze.rca_interpretation }}
+
+{% if analyze.has_regression %}
+\subsection{An\'alise de Regress\~{a}o}
+
+{{ analyze.regression_text }}
+
+{% if analyze.has_regression_table %}
+\begin{table}[H]
+\caption{Coeficientes do modelo de regress\~{a}o}
+\label{tab:regressao}
+\centering
+\begin{tabular}{p{4cm}cccc}
+\toprule
+\textbf{Vari\'avel} & \textbf{Coeficiente} & \textbf{Erro Padr\~{a}o} & \textbf{t} & \textbf{p-valor} \\
+\midrule
+{% for row in analyze.regression_rows %}
+{{ row.variable }} & {{ row.coef }} & {{ row.se }} & {{ row.t }} & {{ row.p }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 (an\'alise autom\'atica)}
+\end{table}
+{% endif %}
+{% endif %}

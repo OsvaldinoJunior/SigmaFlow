@@ -1,0 +1,29 @@
+\section{Defini\c{c}\~{a}o do Problema e Descri\c{c}\~{a}o dos Dados}
+
+\subsection{Escopo do Projeto}
+
+{{ dataset.scope_text }}
+
+\subsection{Perfil do Dataset}
+
+{{ dataset.profile_text }}
+
+{% if dataset.has_stats %}
+\begin{table}[H]
+\caption{Estat\'isticas descritivas das vari\'aveis num\'ericas}
+\label{tab:descritivas}
+\centering
+\begin{tabular}{p{4cm}cccccc}
+\toprule
+\textbf{Vari\'avel} & \textbf{M\'edia} & \textbf{DP} & \textbf{M\'in} & \textbf{Mediana} & \textbf{M\'ax} & \textbf{CV (\%)} \\
+\midrule
+{% for row in dataset.stats_rows %}
+{{ row.variable }} & {{ row.mean }} & {{ row.std }} & {{ row.min }} & {{ row.median }} & {{ row.max }} & {{ row.cv }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 (an\'alise autom\'atica)}
+\end{table}
+{% endif %}
+
+{{ dataset.stats_interpretation }}

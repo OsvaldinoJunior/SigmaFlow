@@ -1,0 +1,38 @@
+\section{Metodologia DMAIC}
+
+{{ metodologia.intro }}
+
+\begin{enumerate}
+{% for phase in metodologia.phases %}
+\item \textbf{ {{- phase.label -}} } --- {{ phase.description }}.
+{% endfor %}
+\end{enumerate}
+
+\subsection{Caracteriza\c{c}\~{a}o e Planejamento}
+
+{{ metodologia.planning_text }}
+
+\subsection{Testes de Normalidade}
+
+{{ metodologia.normality_text }}
+
+\subsection{Testes de Hip\'otese}
+
+{{ metodologia.hypothesis_text }}
+
+\subsection{Cartas de Controle e An\'alise de Capacidade}
+
+{{ metodologia.spc_text }}
+
+\begin{equation}
+    C_p = \frac{USL - LSL}{6\hat{\sigma}}
+    \qquad
+    C_{pk} = \min\!\left(\frac{USL - \bar{x}}{3\hat{\sigma}},\;
+                          \frac{\bar{x} - LSL}{3\hat{\sigma}}\right)
+\end{equation}
+
+{{ metodologia.capability_eq_note }}
+
+\subsection{An\'alise de Causa Raiz}
+
+{{ metodologia.rca_text }}

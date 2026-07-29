@@ -1,0 +1,23 @@
+\section{Fase Improve --- Melhoria}
+
+{{ improve.intro }}
+
+{% if improve.has_doe %}
+\subsection{Design of Experiments (DOE)}
+
+{{ improve.doe_text }}
+{% endif %}
+
+{% if improve.has_recommendations %}
+\subsection{Recomenda\c{c}\~{o}es de Melhoria}
+
+{{ improve.recommendations_intro }}
+
+\begin{enumerate}
+{% for rec in improve.recommendations %}
+\item \textbf{ {{- rec.category -}} }: {{ rec.action }}
+{% endfor %}
+\end{enumerate}
+
+{{ improve.recommendations_note }}
+{% endif %}

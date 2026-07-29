@@ -1,0 +1,45 @@
+% ================================================================
+%  config/titulos.tex
+%  Formato dos t?tulos conforme norma ABNT.
+%
+%  N?vel 1 (section):       MAI?SCULO + NEGRITO
+%  N?vel 2 (subsection):    S? MAI?SCULO
+%  N?vel 3 (subsubsection): min?sculo + negrito
+%  N?vel 4 (paragraph):     min?sculo + normal
+%
+%  Todos alinhados ? margem esquerda.
+% ================================================================
+
+% Espa?amentos: {recuo}{espa?o antes}{espa?o depois}
+\titlespacing*{\section}      {0pt}{1\baselineskip}{1\baselineskip}
+\titlespacing*{\subsection}   {0pt}{1\baselineskip}{1\baselineskip}
+\titlespacing*{\subsubsection}{0pt}{1\baselineskip}{1\baselineskip}
+\titlespacing*{\paragraph}    {0pt}{1\baselineskip}{1\baselineskip}
+
+% Se??o prim?ria ? MAI?SCULO e NEGRITO
+\titleformat{\section}
+    {\bfseries}
+    {\thesection\space}
+    {0pt}
+    {\MakeUppercase}
+
+% Se??o secund?ria ? S? MAI?SCULO (sem negrito)
+\titleformat{\subsection}
+    {\normalfont}
+    {\thesubsection\space}
+    {0pt}
+    {\MakeUppercase}
+
+% Se??o terci?ria ? min?sculo e negrito
+\titleformat{\subsubsection}
+    {\bfseries}
+    {\thesubsubsection\space}
+    {0pt}
+    {}
+
+% Se??o quatern?ria ? min?sculo e normal
+\titleformat{\paragraph}[hang]
+    {\normalfont}
+    {\theparagraph\space}
+    {0pt}
+    {}

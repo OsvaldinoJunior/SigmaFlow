@@ -1,0 +1,51 @@
+\section{Resultados Estat\'isticos}
+
+{{ results.intro }}
+
+\subsection{Representa\c{c}\~{o}es Gr\'aficas}
+
+{{ results.figures_intro }}
+
+{% for fig in results.figures %}
+\begin{figure}[H]
+\centering
+\caption{ {{- fig.caption -}} }
+\includegraphics[width=0.88\textwidth]{ {{- fig.path -}} }
+\fonte{SigmaFlow v10 (gerado automaticamente)}
+\end{figure}
+
+{% endfor %}
+
+\subsection{S\'intese dos Achados}
+
+{{ results.insights_intro }}
+
+{% if results.has_critical %}
+\begin{insightcritico}
+\begin{itemize}
+{% for ins in results.critical_insights %}
+\item {{ ins }}
+{% endfor %}
+\end{itemize}
+\end{insightcritico}
+{% endif %}
+
+{% if results.has_warning %}
+\begin{insightaviso}
+\begin{itemize}
+{% for ins in results.warning_insights %}
+\item {{ ins }}
+{% endfor %}
+\end{itemize}
+\end{insightaviso}
+{% endif %}
+
+{% if results.has_info %}
+\begin{insightinfo}
+\begin{itemize}
+{% for ins in results.info_insights %}
+\item {{ ins }}
+{% endfor %}
+\end{itemize}
+\end{insightinfo}
+{% endif %}

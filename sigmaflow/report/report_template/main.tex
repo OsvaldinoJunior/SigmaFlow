@@ -1,0 +1,47 @@
+\documentclass[12pt]{article}
+
+% ================================================================
+%  ARQUIVOS DE CONFIGURACAO
+% ================================================================
+\input{config/pacotes}        % 1. Pacotes LaTeX
+\input{config/pagina}         % 2. Margens, espacamento e paragrafo
+\input{config/titulos}        % 3. Formato dos titulos (ABNT)
+\input{config/sumario}        % 4. Aparencia do sumario
+\input{config/elementos}      % 5. Figuras, tabelas, quadros, caixas
+\input{config/capa}           % 6. Comando \capasigmaflow{}{}{}{}
+\input{config/hiperlinks}     % 7. Hyperlinks e metadados PDF
+
+% ================================================================
+%                        DOCUMENTO
+% ================================================================
+\begin{document}
+
+% ----- CAPA -----
+\capasigmaflow
+    {SIGMAFLOW_TITLE}
+    {SIGMAFLOW_DATASET}
+    {SIGMAFLOW_ORGANIZATION}
+    {SIGMAFLOW_DATE}
+
+% ----- SUMARIO -----
+\tableofcontents
+\newpage
+
+% ================================================================
+%  SECOES FIXAS
+% ================================================================
+\input{sections/introducao}
+\input{sections/metodologia_dmaic}
+
+% ================================================================
+%  ANALISES POR DATASET (geradas dinamicamente)
+% ================================================================
+SIGMAFLOW_ALL_DATASETS
+
+% ================================================================
+%  SECOES FINAIS
+% ================================================================
+\input{sections/discussao}
+\input{sections/conclusao}
+
+\end{document}

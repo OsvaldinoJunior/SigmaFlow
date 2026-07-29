@@ -1,0 +1,32 @@
+% ================================================================
+%  config/sumario.tex
+%  Apar?ncia das entradas do sum?rio ? espelha o formato dos t?tulos.
+% ================================================================
+
+\titlecontents{section}
+    [0pt]
+    {}
+    {\bfseries\MakeUppercase{\thecontentslabel}\enspace\MakeUppercase}
+    {}
+    {\titlerule*[0.5pc]{.}\contentspage}
+
+\titlecontents{subsection}
+    [1.5em]
+    {}
+    {\MakeUppercase{\thecontentslabel}\enspace\MakeUppercase}
+    {}
+    {\titlerule*[0.5pc]{.}\contentspage}
+
+\titlecontents{subsubsection}
+    [3em]
+    {}
+    {\bfseries\thecontentslabel\enspace}
+    {}
+    {\titlerule*[0.5pc]{.}\contentspage}
+
+\titlecontents{paragraph}
+    [4.5em]
+    {}
+    {\thecontentslabel\enspace}
+    {}
+    {\titlerule*[0.5pc]{.}\contentspage}

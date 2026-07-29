@@ -1,0 +1,30 @@
+\section{Sum\'ario Executivo}
+
+\begin{tcolorbox}[
+  enhanced, breakable,
+  colback  = {% if executive_summary.risk_level == "critical" %}red!5!white{% elif executive_summary.risk_level == "warning" %}orange!5!white{% else %}blue!4!white{% endif %},
+  colframe = {{ executive_summary.risk_color }},
+  boxrule  = 1.2pt,
+  arc      = 5pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt,
+  title    = {N\'ivel de Risco Global: \textcolor{ {{- executive_summary.risk_color -}} }{\textbf{ {{- executive_summary.risk_label -}} }}},
+  fonttitle= \bfseries\normalsize,
+  before upper={\setlength{\parskip}{4pt}\justifying}
+]
+
+{{ executive_summary.text }}
+
+{% if executive_summary.has_critical or executive_summary.has_warning %}
+\vspace{4pt}
+\begin{tabular}{ll}
+{% if executive_summary.has_critical %}
+\textcolor{corCritico}{\textbf{\large$\bullet$}} &
+  \textcolor{corCritico}{\textbf{ {{- executive_summary.n_critical -}} achado(s) cr\'itico(s) --- a\c{c}\~{a}o imediata necess\'aria}} \\
+{% endif %}
+{% if executive_summary.has_warning %}
+\textcolor{corAviso}{\textbf{\large$\bullet$}} &
+  \textcolor{corAviso}{\textbf{ {{- executive_summary.n_warning -}} aviso(s) --- plano de a\c{c}\~{a}o recomendado}} \\
+{% endif %}
+\end{tabular}
+{% endif %}
+\end{tcolorbox}

@@ -1,0 +1,88 @@
+\section{Principais Insights e Recomenda\c{c}\~{o}es}
+
+Esta se\c{c}\~{a}o apresenta a interpreta\c{c}\~{a}o autom\'atica dos resultados
+estat\'isticos gerados pelo SigmaFlow v10, organizados por tipo de an\'alise e
+ordenados por severidade. Para cada achado s\~{a}o indicados o impacto potencial
+no processo e as a\c{c}\~{o}es recomendadas.
+
+{% if key_insights.has_insights %}
+
+{% for ins in key_insights.insights %}
+
+\subsection{ {{- ins.title -}} }
+
+{% if ins.severity == "critical" %}
+\begin{insightcritico}
+{% elif ins.severity == "warning" %}
+\begin{insightaviso}
+{% else %}
+\begin{insightinfo}
+{% endif %}
+
+\textbf{Interpreta\c{c}\~{a}o:} {{ ins.interpretation }}
+
+\vspace{4pt}
+\textbf{Impacto no Processo:} {{ ins.impact }}
+
+{% if ins.recommendations %}
+\vspace{4pt}
+\textbf{A\c{c}\~{o}es Recomendadas:}
+\begin{itemize}[leftmargin=1.5em, itemsep=1pt]
+{% for rec in ins.recommendations %}
+\item {{ rec }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% if ins.severity == "critical" %}
+\end{insightcritico}
+{% elif ins.severity == "warning" %}
+\end{insightaviso}
+{% else %}
+\end{insightinfo}
+{% endif %}
+
+{% endfor %}
+
+\subsection{Recomenda\c{c}\~{o}es Priorizadas}
+
+A tabela a seguir consolida todas as recomenda\c{c}\~{o}es geradas,
+ordenadas por prioridade e urgência de interven\c{c}\~{a}o.
+
+{% if key_insights.has_recommendations %}
+\begin{table}[H]
+\caption{Recomenda\c{c}\~{o}es priorizadas pelo SigmaFlow v10}
+\label{tab:recommendations}
+\centering
+\begin{tabular}{cp{3.5cm}p{8.5cm}}
+\toprule
+\textbf{Prior.} & \textbf{Categoria} & \textbf{A\c{c}\~{a}o Recomendada} \\
+\midrule
+{% for rec in key_insights.recommendations %}
+{% if rec.severity == "critical" %}
+\rowcolor{red!8}
+{% elif rec.severity == "warning" %}
+\rowcolor{orange!8}
+{% endif %}
+{{ rec.priority }} &
+\textcolor{
+  {%- if rec.severity == "critical" -%}corCritico
+  {%- elif rec.severity == "warning" -%}corAviso
+  {%- else -%}corInfo{%- endif -%}
+}{\textbf{ {{- rec.category | truncate(35, True, '...') -}} }} &
+{{ rec.action }} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\fonte{SigmaFlow v10 --- gerado automaticamente pelo RecommendationEngine}
+\end{table}
+{% endif %}
+
+{% else %}
+\begin{insightinfo}
+Nenhum insight espec\'ifico foi gerado para este dataset.
+Execute o pipeline com datasets que contenham dados de processo,
+limites de especifica\c{c}\~{a}o ou s\'eries temporais para ativar
+as interpreta\c{c}\~{o}es autom\'aticas.
+\end{insightinfo}
+{% endif %}

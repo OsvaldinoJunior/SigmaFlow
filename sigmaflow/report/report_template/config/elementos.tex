@@ -1,0 +1,89 @@
+% ================================================================
+%  config/elementos.tex
+%  Configura??o de figuras, tabelas, quadros e equa??es.
+%
+%  Figuras : legenda ABAIXO, centralizada
+%  Tabelas : legenda ACIMA,  centralizada
+%  Quadros : legenda ACIMA,  bordas fechadas, contador pr?prio
+%  Equa??es: numeradas ? direita (padr?o amsmath)
+%  Fonte   : \fonte{Autor (ano)} ? abaixo de qualquer elemento
+% ================================================================
+
+% -------- CAPTION GERAL --------
+\captionsetup{
+    labelsep=endash,
+    justification=justified,
+    singlelinecheck=false,
+    font=normalsize,
+    labelfont=bf
+}
+
+% -------- FIGURA: legenda centralizada --------
+\captionsetup[figure]{
+    position=below,
+    justification=centering,
+    singlelinecheck=false
+}
+
+% -------- TABELA: legenda acima --------
+\captionsetup[table]{
+    position=above,
+    justification=centering,
+    singlelinecheck=false
+}
+
+% -------- QUADRO: contador pr?prio + legenda acima --------
+\newcounter{quadro}
+\newcommand{\quadrocaption}[1]{%
+    \refstepcounter{quadro}%
+    \par\noindent\textbf{Quadro \thequadro} -- #1\par%
+}
+
+% -------- FONTE: linha abaixo de figuras, tabelas e quadros --------
+% Uso: \fonte{Autor (ano)}  ou  \fonte{SigmaFlow (ano)}
+\newcommand{\fonte}[1]{%
+    \par\noindent Fonte: #1\par%
+}
+
+% -------- CAIXA DE DESTAQUE para insights cr?ticos --------
+\definecolor{critico}{RGB}{220,53,69}
+\definecolor{aviso}{RGB}{255,152,0}
+\definecolor{info}{RGB}{40,167,69}
+\definecolor{fundo_critico}{RGB}{255,235,238}
+\definecolor{fundo_aviso}{RGB}{255,248,225}
+\definecolor{fundo_info}{RGB}{232,245,233}
+\definecolor{sigmablue}{RGB}{21,101,192}
+
+\tcbset{
+    insightbase/.style={
+        breakable,
+        boxrule=0.8pt,
+        arc=3pt,
+        left=8pt, right=8pt, top=6pt, bottom=6pt,
+        fonttitle=\bfseries\small
+    }
+}
+
+\newtcolorbox{insightcritico}[1][]{
+    insightbase,
+    colframe=critico,
+    colback=fundo_critico,
+    title={\textcolor{critico}{$\blacksquare$}\enspace Achado Crítico},
+    #1
+}
+
+\newtcolorbox{insightaviso}[1][]{
+    insightbase,
+    colframe=aviso,
+    colback=fundo_aviso,
+    title={\textcolor{aviso}{$\blacksquare$}\enspace Atenção},
+    #1
+}
+
+\newtcolorbox{insightinfo}[1][]{
+    insightbase,
+    colframe=info,
+    colback=fundo_info,
+    title={\textcolor{info}{$\blacksquare$}\enspace Informação},
+    #1
+}
