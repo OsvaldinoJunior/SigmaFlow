@@ -20,6 +20,14 @@ services:
       retries: 5
     networks:
       - sigmaflow-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
 
   # Redis for Celery
   redis:
@@ -36,12 +44,21 @@ services:
       retries: 5
     networks:
       - sigmaflow-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
 
   # SigmaFlow API Server
   api:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: sigmaflow-api
     command: uvicorn sigmaflow.api.main:app --host 0.0.0.0 --port 8000 --workers 4
     environment:
@@ -52,6 +69,7 @@ services:
       - DEBUG=false
       - LOG_LEVEL=INFO
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - API_CORS_ORIGINS=${API_CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
     ports:
       - "8000:8000"
     depends_on:
@@ -63,14 +81,29 @@ services:
       - sigmaflow-net
     volumes:
       - ./storage:/app/storage
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Celery Worker
   worker:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: sigmaflow-worker
-    command: celery -A sigmaflow.worker.celery_app worker --loglevel=INFO --concurrency=4
+    command: celery -A sigmaflow.worker_fixed.celery_app worker --loglevel=INFO --concurrency=4
     environment:
       - DATABASE_URL=postgresql+asyncpg://sigmaflow:sigmaflow@postgres:5432/sigmaflow
       - DATABASE_URL_SYNC=postgresql+psycopg2://sigmaflow:sigmaflow@postgres:5432/sigmaflow
@@ -88,14 +121,24 @@ services:
       - sigmaflow-net
     volumes:
       - ./storage:/app/storage
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+      replicas: 2
 
   # Celery Beat (scheduler)
   beat:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
     container_name: sigmaflow-beat
-    command: celery -A sigmaflow.worker.celery_app beat --loglevel=INFO
+    command: celery -A sigmaflow.worker_fixed.celery_app beat --loglevel=INFO
     environment:
       - DATABASE_URL=postgresql+asyncpg://sigmaflow:sigmaflow@postgres:5432/sigmaflow
       - DATABASE_URL_SYNC=postgresql+psycopg2://sigmaflow:sigmaflow@postgres:5432/sigmaflow
@@ -113,6 +156,46 @@ services:
       - sigmaflow-net
     volumes:
       - ./storage:/app/storage
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
+
+  # Frontend (Next.js standalone)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sigmaflow-frontend
+    command: node frontend/server.js
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - sigmaflow-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres_data:
