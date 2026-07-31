@@ -26,7 +26,6 @@ Uso:
 from __future__ import annotations
 
 import logging
-import numpy as np
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -177,13 +176,6 @@ class InsightEngine:
         reg = advanced.get("regression", {})
         if reg and isinstance(reg, dict) and "error" not in reg:
             ins = self.regression_insight(reg)
-            if ins:
-                insights.append(ins)
-
-        # ── VIF / Multicollinearity ───────────────────────────────────────────
-        vif_data = reg.get("vif") if reg else None
-        if vif_data and isinstance(vif_data, list):
-            ins = self.vif_insight(vif_data)
             if ins:
                 insights.append(ins)
 
@@ -609,90 +601,6 @@ class InsightEngine:
         return AnalysisInsight(
             analysis_type   = "regression",
             title           = r"An\'{{a}}lise de Regress\~{a}o",
-            interpretation  = interp,
-            impact          = impact,
-            recommendations = recs,
-            severity        = severity,
-            metrics         = metrics,
-        )
-
-    def vif_insight(
-        self, vif_results: List[Dict[str, Any]]
-    ) -> Optional[AnalysisInsight]:
-        """Interpreta resultados de VIF (Variance Inflation Factor)."""
-        if not vif_results:
-            return None
-
-        high_vif   = [v for v in vif_results if isinstance(v, dict) and v.get("multicollinearity") == "High"]
-        moderate_vif = [v for v in vif_results if isinstance(v, dict) and v.get("multicollinearity") == "Moderate"]
-        n_high     = len(high_vif)
-        n_moderate = len(moderate_vif)
-        n_total    = len(vif_results)
-
-        if n_high == 0 and n_moderate == 0:
-            return None
-
-        max_vif = max(
-            (v.get("vif", 0) for v in vif_results if v.get("vif") is not None and np.isfinite(v["vif"])),
-            default=0
-        )
-        high_vars = [v.get("variable", "?") for v in high_vif]
-        mod_vars  = [v.get("variable", "?") for v in moderate_vif]
-
-        metrics = {
-            "n_high_vif": n_high,
-            "n_moderate_vif": n_moderate,
-            "n_total": n_total,
-            "max_vif": round(float(max_vif), 2) if max_vif else 0,
-            "high_vif_variables": high_vars,
-            "moderate_vif_variables": mod_vars,
-        }
-
-        if n_high > 0:
-            severity = "critical"
-            interp = (
-                rf"A an\'{{a}}lise de VIF detectou \textbf{{{n_high} vari\'{{a}}vel(is) com colinearidade severa}} "
-                rf"(VIF > 10): \textbf{{{', '.join(high_vars)}}}. "
-                r"Valores de VIF elevados indicam que essas vari\'{{a}}veis s\~{a}o "
-                r"fortemente correlacionadas com outras preditoras, tornando os coeficientes "
-                r"de regress\~{a}o inst\'{{a}}veis e dif\'iceis de interpretar (Montgomery; Runger, 2014). "
-                r"O VIF m\'aximo observado foi " + _f(max_vif, 1) + r"."
-            )
-            impact = (
-                r"Colinearidade severa compromete a confiabilidade dos coeficientes: "
-                r"pequenas mudan\c{c}as nos dados podem inverter sinais e magnitudes dos "
-                r"estimadores. Previs\~{o}es podem permanecer boas, mas infer\^{e}ncia sobre "
-                r"import\^{a}ncia das vari\'{{a}}veis \'{{e}} inv\'{{a}}lida."
-            )
-            recs = [
-                r"Remover ou combinar vari\'{{a}}veis com VIF > 10 (ex: vari\'{{a}}vel derivada, substituto)",
-                r"Aplicar sele\c{c}\~{a}o de vari\'{{a}}veis (stepwise, LASSO, PCA) para reduzir dimensionalidade",
-                r"Verificar se vari\'{{a}}veis s\~{a}o escalas duplicadas da mesma medida (ex: mm vs cm)",
-                r"Considerar regress\~{a}o ridge (L2) se todas as vari\'{{a}}veis precisam ser mantidas",
-                r"Reavaliar o modelo ap\'{{o}}s remo\c{c}\~{a}o e verificar VIF novamente",
-            ]
-        else:
-            severity = "warning"
-            interp = (
-                rf"A an\'{{a}}lise de VIF detectou \textbf{{{n_moderate} vari\'{{a}}vel(is) com colinearidade moderada}} "
-                rf"(5 < VIF \le 10): \textbf{{{', '.join(mod_vars)}}}. "
-                r"Embora n\~{a}o seja severa, a colinearidade moderada pode inflar os erros "
-                r"padr\~{a}o dos coeficientes em at\'e 2-3x, reduzindo o poder estat\'istico "
-                r"dos testes t individuais (Montgomery; Runger, 2014)."
-            )
-            impact = (
-                r"Precis\~{a}o dos coeficientes reduzida. Intervalos de confian\c{c}a mais amplos "
-                r"podem mascarar signific\^{a}ncia real das vari\'{{a}}veis."
-            )
-            recs = [
-                r"Monitorar VIF em novos dados; considerar remo\c{c}\~{a}o se VIF subir acima de 10",
-                r"Avaliar correla\c{c}\~{a}o entre as vari\'{{a}}veis sinalizadas",
-                r"Se objetivo \'{{e}} previs\~{a}o (n\~{a}o infer\^{e}ncia), modelo pode ser mantido",
-            ]
-
-        return AnalysisInsight(
-            analysis_type   = "vif",
-            title           = r"Colinearidade M\'{u}ltipla (VIF)",
             interpretation  = interp,
             impact          = impact,
             recommendations = recs,

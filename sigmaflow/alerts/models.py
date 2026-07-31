@@ -25,7 +25,9 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from sigmaflow.core.models import Base
 
 if TYPE_CHECKING:
     from sigmaflow.core.models import Project, User, Run, Tenant

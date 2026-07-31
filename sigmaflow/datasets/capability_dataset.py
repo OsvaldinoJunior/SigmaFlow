@@ -28,15 +28,6 @@ import pandas as pd
 from scipy import stats as sc_stats
 
 from sigmaflow.datasets.base_dataset import BaseDataset
-from sigmaflow.analysis.transformations import (
-    boxcox_transform,
-    johnson_transform,
-    compute_capability_nonnormal,
-    compute_p_chart,
-    compute_np_chart,
-    compute_c_chart,
-    compute_u_chart,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +86,7 @@ class CapabilityDataset(BaseDataset):
                                    "p_value": round(float(p), 6),
                                    "normal": bool(p > 0.05)}
 
-        # Standard capability (normal assumption)
+        # Capability indices
         if usl is not None and lsl is not None:
             mu  = series.mean()
             std = series.std(ddof=1)
@@ -113,85 +104,10 @@ class CapabilityDataset(BaseDataset):
                 "dpmo":          round(dpmo, 1),
                 "sigma_level":   round(sigma, 2),
                 "usl": usl, "lsl": lsl,
-                "assumption": "normal",
             }
-
-        # Non-normal capability (if data fails normality test)
-        norm_result = result.get("normality", {})
-        if not norm_result.get("normal", True) and usl is not None and lsl is not None:
-            try:
-                nonnorm = compute_capability_nonnormal(series, usl, lsl)
-                if "error" not in nonnorm:
-                    result["capability_nonnormal"] = nonnorm
-            except Exception as e:
-                logger.warning(f"Non-normal capability failed: {e}")
-
-        # Attribute charts detection and analysis
-        result["attribute_charts"] = self._detect_and_analyze_attribute_charts(df)
 
         self.results = result
         return result
-
-    def _detect_and_analyze_attribute_charts(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """Detect and analyze attribute data (p, np, c, u charts)."""
-        charts = {}
-
-        # Look for defect count columns
-        defect_cols = [c for c in df.columns if any(kw in c.lower() for kw in ("defect", "reject", "nonconform", "non_conform"))]
-        count_cols = [c for c in df.columns if any(kw in c.lower() for kw in ("count", "freq", "frequency", "qty", "quantity"))]
-        sample_cols = [c for c in df.columns if any(kw in c.lower() for kw in ("sample", "subgroup", "lot", "batch", "n_", "size"))]
-
-        # p-chart: defectives + sample sizes
-        if defect_cols and sample_cols:
-            for dcol in defect_cols[:1]:
-                for scol in sample_cols[:1]:
-                    try:
-                        defectives = df[dcol].dropna().astype(int).values
-                        sizes = df[scol].dropna().astype(int).values
-                        if len(defectives) == len(sizes) and len(defectives) >= 5:
-                            charts["p"] = compute_p_chart(defectives, sizes)
-                    except Exception:
-                        pass
-
-        # np-chart: defectives with constant sample size
-        if defect_cols and not charts.get("p"):
-            for dcol in defect_cols[:1]:
-                try:
-                    defectives = df[dcol].dropna().astype(int).values
-                    if len(defectives) >= 5:
-                        # Try to infer constant sample size
-                        sizes = df[sample_cols[0]].dropna().astype(int).values if sample_cols else None
-                        if sizes is not None and len(set(sizes)) == 1:
-                            charts["np"] = compute_np_chart(defectives, sizes[0])
-                        elif len(defectives) >= 5:
-                            # Assume constant n=100 if not found
-                            charts["np"] = compute_np_chart(defectives, 100)
-                except Exception:
-                    pass
-
-        # c-chart: defects per unit (constant area)
-        if count_cols and not charts:
-            for ccol in count_cols[:1]:
-                try:
-                    defects = df[ccol].dropna().astype(int).values
-                    if len(defects) >= 5:
-                        charts["c"] = compute_c_chart(defects)
-                except Exception:
-                    pass
-
-        # u-chart: defects with varying area of opportunity
-        if count_cols and sample_cols and not charts.get("c"):
-            for ccol in count_cols[:1]:
-                for scol in sample_cols[:1]:
-                    try:
-                        defects = df[ccol].dropna().astype(int).values
-                        sizes = df[scol].dropna().astype(int).values
-                        if len(defects) == len(sizes) and len(defects) >= 5:
-                            charts["u"] = compute_u_chart(defects, sizes)
-                    except Exception:
-                        pass
-
-        return charts
 
     # ── Plots ─────────────────────────────────────────────────────────────────
 

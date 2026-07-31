@@ -36,13 +36,13 @@ class Settings(BaseSettings):
     # Sync URL for SQLAlchemy sync engine (Alembic, Celery, CLI)
     # Format: postgresql+psycopg2://user:pass@host:port/dbname
     database_url_sync: str = Field(
-        default="postgresql+psycopg2://sigmaflow:sigmaflow@localhost:5432/sigmaflow",
+        default="sqlite:///./sigmaflow.db",
         description="Synchronous database URL",
     )
-    # Async URL for FastAPI (asyncpg driver for PostgreSQL)
+    # Async URL for FastAPI (asyncpg driver for PostgreSQL, aiosqlite for SQLite)
     # Format: postgresql+asyncpg://user:pass@host:port/dbname
     database_url_async: str = Field(
-        default="postgresql+asyncpg://sigmaflow:sigmaflow@localhost:5432/sigmaflow",
+        default="sqlite+aiosqlite:///./sigmaflow.db",
         description="Asynchronous database URL",
     )
     db_pool_size: int = 10

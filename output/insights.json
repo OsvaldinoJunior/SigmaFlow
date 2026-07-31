@@ -1,0 +1,275 @@
+[
+  {
+    "dataset": "24. TEMPO DE ATENDIMENTO",
+    "type": "spc",
+    "abstract": "Automated SPC analysis of '24. TEMPO DE ATENDIMENTO' (100 observations, 3 variables) by SigmaFlow v10. 3 statistical anomaly(ies) detected (1 critical, 2 warnings). Regression R²=0.011. 1 column(s) flagged as non-normal.",
+    "insights": [
+      {
+        "rule": "western_electric_rule_2",
+        "description": "Rule 2: 2 run(s) of 9+ consecutive points on the same side of the mean.",
+        "meaning": "A run of nine or more points on one side of the center line has only a ~0.4% probability under a stable process. This pattern typically indicates a sustained shift in the process mean — the average has quietly changed.",
+        "recommendation": "Investigate recent process changes: new supplier batches, equipment recalibration, environmental conditions, or procedural changes. Recalculate control limits if the shift is intentional and sustained.",
+        "severity": "warning",
+        "data": {
+          "run_start_indices": [
+            0,
+            50
+          ]
+        }
+      },
+      {
+        "rule": "western_electric_rule_3",
+        "description": "Rule 3: 1 run(s) of 6+ consecutive points trending in the same direction.",
+        "meaning": "Six consecutive increasing or decreasing points suggest a systematic drift in the process — tool wear, gradual machine degradation, or a slowly changing environmental factor.",
+        "recommendation": "Perform preventive maintenance checks. Review process parameters for drift (temperature, pressure, tooling). Consider implementing automatic process adjustments if the drift is predictable.",
+        "severity": "warning",
+        "data": {
+          "trend_start_indices": [
+            0
+          ]
+        }
+      },
+      {
+        "rule": "trend_increasing",
+        "description": "Significant INCREASING trend detected (τ = 1.000, p = 0.0000).",
+        "meaning": "The process shows a statistically significant increasing drift over time. The Spearman correlation (τ = 1.000) with p-value 0.0000 confirms this is unlikely due to random chance. This represents a special cause of variation requiring investigation.",
+        "recommendation": "Investigate time-dependent factors: tool wear, temperature drift, operator fatigue, gradual raw material changes, or machine degradation. If the trend is expected (e.g., predictable tool wear), consider implementing an automatic process adjustment strategy.",
+        "severity": "critical",
+        "data": {
+          "direction": "increasing",
+          "tau": 1.0,
+          "p_value": 0.0
+        }
+      }
+    ],
+    "root_cause": [],
+    "advanced": [],
+    "summary": [
+      "Process is in statistical control — no out-of-control points detected",
+      "Significant increasing trend detected (Spearman τ=1.000, p=0.0000)"
+    ]
+  },
+  {
+    "dataset": "capability_process",
+    "type": "capability",
+    "abstract": "Automated CAPABILITY analysis of 'capability_process' (200 observations, 3 variables) by SigmaFlow v10. 3 statistical anomaly(ies) detected (2 critical, 1 warnings). Process NOT CAPABLE (Cpk=0.862) — action required. Regression R²=0.000. 2 column(s) flagged as non-normal.",
+    "insights": [
+      {
+        "rule": "western_electric_rule_1",
+        "description": "Rule 1: 1 point(s) outside the 3σ control limits (at indices [139]).",
+        "meaning": "A data point beyond ±3σ from the mean is statistically rare (~0.27% chance under normality). Its presence strongly suggests a special-cause event — something changed in the process at that moment.",
+        "recommendation": "Identify and investigate the specific points flagged. Check for equipment malfunction, operator changes, raw material variation, or measurement errors. Remove confirmed special causes before computing capability indices.",
+        "severity": "critical",
+        "data": {
+          "ooc_indices": [
+            139
+          ],
+          "ucl": 10.2292,
+          "lcl": 9.8059
+        }
+      },
+      {
+        "rule": "western_electric_rule_2",
+        "description": "Rule 2: 1 run(s) of 9+ consecutive points on the same side of the mean.",
+        "meaning": "A run of nine or more points on one side of the center line has only a ~0.4% probability under a stable process. This pattern typically indicates a sustained shift in the process mean — the average has quietly changed.",
+        "recommendation": "Investigate recent process changes: new supplier batches, equipment recalibration, environmental conditions, or procedural changes. Recalculate control limits if the shift is intentional and sustained.",
+        "severity": "warning",
+        "data": {
+          "run_start_indices": [
+            43
+          ]
+        }
+      },
+      {
+        "rule": "capability_cpk",
+        "description": "Process Capability: Incapable (Cpk = 0.862).",
+        "meaning": "Cpk = 0.862 indicates the process cannot consistently meet specification requirements. A significant proportion of output is expected to be out of specification.",
+        "recommendation": "Immediately investigate and address root causes of variation. Consider 100% inspection until capability is improved. Engage process improvement team for DMAIC project.",
+        "severity": "critical",
+        "data": {
+          "Cp": 0.9449,
+          "Cpk": 0.8619,
+          "dpmo": 5000.0,
+          "sigma_level": 4.31
+        }
+      }
+    ],
+    "root_cause": [],
+    "advanced": [],
+    "summary": [
+      "Process is INCAPABLE — Cpk=0.862 (urgent action required)",
+      "Estimated defect rate: 5,000 DPMO (4.31σ)",
+      "1 observations out of specification limits"
+    ]
+  },
+  {
+    "dataset": "logistics",
+    "type": "logistics",
+    "abstract": "Automated LOGISTICS analysis of 'logistics' (200 observations, 3 variables) by SigmaFlow v10. 2 statistical anomaly(ies) detected (0 critical, 2 warnings). Regression R²=0.907. 3 column(s) flagged as non-normal.",
+    "insights": [
+      {
+        "rule": "western_electric_rule_2",
+        "description": "Rule 2: 1 run(s) of 9+ consecutive points on the same side of the mean.",
+        "meaning": "A run of nine or more points on one side of the center line has only a ~0.4% probability under a stable process. This pattern typically indicates a sustained shift in the process mean — the average has quietly changed.",
+        "recommendation": "Investigate recent process changes: new supplier batches, equipment recalibration, environmental conditions, or procedural changes. Recalculate control limits if the shift is intentional and sustained.",
+        "severity": "warning",
+        "data": {
+          "run_start_indices": [
+            136
+          ]
+        }
+      },
+      {
+        "rule": "western_electric_rule_3",
+        "description": "Rule 3: 1 run(s) of 6+ consecutive points trending in the same direction.",
+        "meaning": "Six consecutive increasing or decreasing points suggest a systematic drift in the process — tool wear, gradual machine degradation, or a slowly changing environmental factor.",
+        "recommendation": "Perform preventive maintenance checks. Review process parameters for drift (temperature, pressure, tooling). Consider implementing automatic process adjustments if the drift is predictable.",
+        "severity": "warning",
+        "data": {
+          "trend_start_indices": [
+            140
+          ]
+        }
+      }
+    ],
+    "root_cause": [
+      {
+        "rule": "root_cause_correlation",
+        "description": "'delivery_days' correlates with 'distance_km' (r=+0.935)",
+        "meaning": "Strength: strong",
+        "recommendation": "Investigate this variable as a potential process driver.",
+        "severity": "warning"
+      },
+      {
+        "rule": "root_cause_correlation",
+        "description": "'sla_days' correlates with 'distance_km' (r=+0.875)",
+        "meaning": "Strength: strong",
+        "recommendation": "Investigate this variable as a potential process driver.",
+        "severity": "warning"
+      }
+    ],
+    "advanced": [
+      {
+        "rule": "regression_significant_predictors",
+        "description": "Significant regression predictors: delivery_days, sla_days",
+        "meaning": "R²=0.907",
+        "recommendation": "Monitor and control these variables.",
+        "severity": "info"
+      }
+    ],
+    "summary": [
+      "Lead time: mean=2.3, P90=3.7, CV=0.45 (variation index)",
+      "High throughput variation detected — investigate root causes",
+      "OTD rate is EXCELLENT: 100.0%",
+      "Distance explains 87.5% of delivery time variance (R²=0.875)"
+    ]
+  },
+  {
+    "dataset": "pareto_defects",
+    "type": "root_cause",
+    "abstract": "Automated ROOT_CAUSE analysis of 'pareto_defects' (8 observations, 2 variables) by SigmaFlow v10. No anomalies detected.",
+    "insights": [],
+    "root_cause": [],
+    "advanced": [],
+    "summary": [
+      "Dominant defect category identified: 'Dimensional' accounts for the most occurrences",
+      "Vital few: 3 out of 8 categories account for 68.2% of total defects (1,165)",
+      "Focus corrective actions on: Dimensional, Surface, Weld"
+    ]
+  },
+  {
+    "dataset": "process_variables",
+    "type": "logistics",
+    "abstract": "Automated LOGISTICS analysis of 'process_variables' (300 observations, 5 variables) by SigmaFlow v10. 1 statistical anomaly(ies) detected (1 critical, 0 warnings). Regression R²=0.257. 1 column(s) flagged as non-normal.",
+    "insights": [
+      {
+        "rule": "western_electric_rule_1",
+        "description": "Rule 1: 2 point(s) outside the 3σ control limits (at indices [135, 238]).",
+        "meaning": "A data point beyond ±3σ from the mean is statistically rare (~0.27% chance under normality). Its presence strongly suggests a special-cause event — something changed in the process at that moment.",
+        "recommendation": "Identify and investigate the specific points flagged. Check for equipment malfunction, operator changes, raw material variation, or measurement errors. Remove confirmed special causes before computing capability indices.",
+        "severity": "critical",
+        "data": {
+          "ooc_indices": [
+            135,
+            238
+          ],
+          "ucl": 89.9569,
+          "lcl": 59.9781
+        }
+      }
+    ],
+    "root_cause": [
+      {
+        "rule": "root_cause_correlation",
+        "description": "'temperature' correlates with 'defects' (r=+0.407)",
+        "meaning": "Strength: weak",
+        "recommendation": "Investigate this variable as a potential process driver.",
+        "severity": "info"
+      }
+    ],
+    "advanced": [
+      {
+        "rule": "regression_significant_predictors",
+        "description": "Significant regression predictors: temperature, speed",
+        "meaning": "R²=0.2568",
+        "recommendation": "Monitor and control these variables.",
+        "severity": "info"
+      }
+    ],
+    "summary": [
+      "Lead time: mean=2.5, P90=2.9, CV=0.12 (variation index)",
+      "Distance explains 0.0% of delivery time variance (R²=0.000)"
+    ]
+  },
+  {
+    "dataset": "spc_thickness",
+    "type": "spc",
+    "abstract": "Automated SPC analysis of 'spc_thickness' (120 observations, 2 variables) by SigmaFlow v10. 2 statistical anomaly(ies) detected (1 critical, 1 warnings). 2 column(s) flagged as non-normal.",
+    "insights": [
+      {
+        "rule": "western_electric_rule_1",
+        "description": "Rule 1: 1 point(s) outside the 3σ control limits (at indices [92]).",
+        "meaning": "A data point beyond ±3σ from the mean is statistically rare (~0.27% chance under normality). Its presence strongly suggests a special-cause event — something changed in the process at that moment.",
+        "recommendation": "Identify and investigate the specific points flagged. Check for equipment malfunction, operator changes, raw material variation, or measurement errors. Remove confirmed special causes before computing capability indices.",
+        "severity": "critical",
+        "data": {
+          "ooc_indices": [
+            92
+          ],
+          "ucl": 2.814,
+          "lcl": 2.248
+        }
+      },
+      {
+        "rule": "western_electric_rule_2",
+        "description": "Rule 2: 3 run(s) of 9+ consecutive points on the same side of the mean.",
+        "meaning": "A run of nine or more points on one side of the center line has only a ~0.4% probability under a stable process. This pattern typically indicates a sustained shift in the process mean — the average has quietly changed.",
+        "recommendation": "Investigate recent process changes: new supplier batches, equipment recalibration, environmental conditions, or procedural changes. Recalculate control limits if the shift is intentional and sustained.",
+        "severity": "warning",
+        "data": {
+          "run_start_indices": [
+            34,
+            56,
+            80
+          ]
+        }
+      },
+      {
+        "rule": "trend_stable",
+        "description": "No statistically significant trend detected in the process data.",
+        "meaning": "The Spearman correlation coefficient (τ = 0.290) and p-value (p = 0.0013) indicate no systematic drift in the process over time.",
+        "recommendation": "Continue routine monitoring. The process is temporally stable.",
+        "severity": "info",
+        "data": {
+          "tau": 0.2902,
+          "p_value": 0.001304
+        }
+      }
+    ],
+    "root_cause": [],
+    "advanced": [],
+    "summary": [
+      "Minor instability: 1 out-of-control point(s) — investigate"
+    ]
+  }
+]

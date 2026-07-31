@@ -6,7 +6,6 @@ from sigmaflow.core.problem_detector  import ProblemDetector   # noqa
 from sigmaflow.core.analysis_selector import AnalysisSelector  # noqa
 from sigmaflow.core.models            import (                # noqa
     Base,
-    Tenant,
     Plant,
     Project,
     User,
@@ -15,7 +14,6 @@ from sigmaflow.core.models            import (                # noqa
     PhaseResult,
     Insight,
     ActionItem,
-    ScheduledRun,
     UserRole,
     RunStatus,
     PhaseName,
@@ -38,7 +36,6 @@ from sigmaflow.core.database          import (
 )  # noqa
 from sigmaflow.core.models            import (
     Base,
-    Tenant,
     Plant,
     User,
     Project,
@@ -47,7 +44,6 @@ from sigmaflow.core.models            import (
     PhaseResult,
     Insight,
     ActionItem,
-    ScheduledRun,
     UserRole,
     RunStatus,
     PhaseName,
