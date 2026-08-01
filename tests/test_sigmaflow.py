@@ -255,6 +255,7 @@ class TestRulesEngine:
             assert isinstance(r, Insight)
             assert r.rule
             assert r.description
+            assert r.severity
 
     def test_capability_insight_for_incapable_process(self):
         """Incapable process (Cpk < 1) triggers a critical capability insight."""
@@ -271,3 +272,50 @@ class TestRulesEngine:
         insights = engine.evaluate(df, analysis, "capability")
         critical = [i for i in insights if i.severity == "critical"]
         assert len(critical) >= 1, "Incapable process should produce a critical insight"
+
+
+# ─── Logistic Regression Integration ───────────────────────────────────────────
+
+class TestLogisticRegressionIntegration:
+    """Tests for logistic regression integration in the engine pipeline."""
+
+    def test_engine_runs_logistic_regression_on_binary_target(self):
+        """Engine should detect binary target and run logistic regression."""
+        from sigmaflow.core.engine import Engine
+        from sigmaflow.core.dataset_registry import DatasetRegistry
+        import tempfile
+        from pathlib import Path
+
+        np.random.seed(42)
+        n = 200
+        df = pd.DataFrame({
+            "feature1": np.random.normal(0, 1, n),
+            "feature2": np.random.normal(0, 1, n),
+            "feature3": np.random.normal(0, 1, n),
+            "status": np.random.binomial(1, 0.3, n),  # binary target
+        })
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_dir = Path(tmpdir) / "input"
+            output_dir = Path(tmpdir) / "output"
+            input_dir.mkdir()
+            df.to_csv(input_dir / "test_logistic.csv", index=False)
+
+            registry = DatasetRegistry().discover()
+            engine = Engine(input_dir=input_dir, output_dir=output_dir, 
+                          registry=registry, run_dashboard=False)
+            results = engine.run()
+
+            assert len(results) == 1
+            r = results[0]
+            assert "advanced" in r
+            # Check that logistic regression ran
+            logistic_keys = [k for k in r["advanced"].keys() if "logistic" in k.lower()]
+            assert len(logistic_keys) == 1, f"Expected 1 logistic key, got {logistic_keys}"
+            
+            logistic_result = r["advanced"][logistic_keys[0]]
+            assert "error" not in logistic_result
+            assert "auc" in logistic_result, "AUC should be present in logistic result"
+            assert "accuracy" in logistic_result, "Accuracy should be present"
+            assert 0 <= logistic_result["auc"] <= 1, "AUC should be between 0 and 1"
+            assert 0 <= logistic_result["accuracy"] <= 1, "Accuracy should be between 0 and 1"
