@@ -65,3 +65,8 @@ desktop.ini
 *.bak
 *.swp
 ~$*
+
+# ── Diretórios legados (lixo de refatoração) ──────────────────────────────────
+sigmaflow/alerts_old/
+sigmaflow/api_old/
+sigmaflow/worker_fixed/
