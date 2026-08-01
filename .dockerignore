@@ -1,0 +1,121 @@
+# Docker ignore file for SigmaFlow
+# Excludes unnecessary files from build context
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+MANIFEST
+.venv/
+venv/
+env/
+conda/
+.conda/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.pytype/
+
+# Virtual environments
+.env
+.env.local
+.env.production
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# LaTeX
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.out
+
+# Temp
+*.tmp
+*.bak
+*.swp
+~$*
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+# Database
+*.db
+*.sqlite
+
+# Output directories
+output/
+logs/
+figures/
+reports/
+*.log
+
+# Documentation
+docs/_build/
+*.md
+
+# Tests
+tests/__pycache__/
+test_*.py
+test_sprint*.py
+
+# Root-owned files and directories to exclude from build context
+alembic/
+alembic.ini
+docker-compose.yml
+uv.lock
+GAP_ANALYSIS.md
+sigmaflow.db
+sigmaflow.egg-info/
+*.pyc
+
+# Specific root-owned Python files in sigmaflow/
+sigmaflow/connectors/
+sigmaflow/alerts_old/
+sigmaflow/api_old/
+sigmaflow/worker/
+sigmaflow/datasets/capability_dataset.py
+sigmaflow/insights/insight_engine.py
+sigmaflow/insights/statistical_rules.py
+sigmaflow/analysis/logistic_regression.py
+sigmaflow/analysis/doe_analysis.py
+sigmaflow/analysis/regression_analysis.py
+sigmaflow/core_new/
+
+# Test files
+test_sprint*.py
+cli.py
+run_dmaic.py
+generate_v10_demos.py
+main.py
+requirements.txt
+setup.py
+
+# pytest cache
+.pytest_cache/

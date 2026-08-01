@@ -1,0 +1,347 @@
+version: "3.9"
+
+# SigmaFlow Production Docker Compose
+# ===================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: sigmaflow-postgres-prod
+    environment:
+      POSTGRES_USER: sigmaflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: sigmaflow
+    ports:
+      - "127.0.0.1:5432:5432"  # Only bind to localhost
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigmaflow -d sigmaflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - sigmaflow-internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis for Celery
+  redis:
+    image: redis:7-alpine
+    container_name: sigmaflow-redis-prod
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:6379:6379"  # Only bind to localhost
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - sigmaflow-internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # SigmaFlow API Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sigmaflow-api-prod
+    command: >
+      uvicorn sigmaflow.api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers ${API_WORKERS:-4}
+      --proxy-headers
+      --forwarded-allow-ips="*"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_ASYNC}
+      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+      - REDIS_URL=${REDIS_URL}
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - SECRET_KEY=${SECRET_KEY}
+      - API_CORS_ORIGINS=${API_CORS_ORIGINS}
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - STORAGE_LOCAL_ROOT=${STORAGE_LOCAL_ROOT:-/app/storage}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_TLS=${SMTP_TLS:-true}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - WEBHOOK_TEAMS=${WEBHOOK_TEAMS}
+      - WEBHOOK_SLACK=${WEBHOOK_SLACK}
+      - WEBHOOK_GENERIC=${WEBHOOK_GENERIC}
+      - LLM_PROVIDER=${LLM_PROVIDER:-none}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2048}
+      - SCHEDULER_ENABLED=${SCHEDULER_ENABLED:-true}
+      - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE}
+    ports:
+      - "127.0.0.1:8000:8000"  # Only bind to localhost (reverse proxy handles external)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sigmaflow-internal
+      - sigmaflow-external
+    volumes:
+      - ./storage:/app/storage
+      - ./input:/app/input:ro
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2"
+        reservations:
+          memory: 1G
+          cpus: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Celery Worker (scaled separately)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sigmaflow-worker-prod
+    command: >
+      celery -A sigmaflow.worker_fixed.celery_app worker
+      --loglevel=INFO
+      --concurrency=${CELERY_WORKER_CONCURRENCY:-4}
+      --max-tasks-per-child=${CELERY_WORKER_MAX_TASKS_PER_CHILD:-100}
+      --prefetch-multiplier=${CELERY_WORKER_PREFETCH_MULTIPLIER:-4}
+    environment:
+      - DATABASE_URL=${DATABASE_URL_ASYNC}
+      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+      - REDIS_URL=${REDIS_URL}
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - SECRET_KEY=${SECRET_KEY}
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - STORAGE_LOCAL_ROOT=${STORAGE_LOCAL_ROOT:-/app/storage}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
+      - LLM_PROVIDER=${LLM_PROVIDER:-none}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_BASE_URL=${LLM_BASE_URL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2048}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sigmaflow-internal
+    volumes:
+      - ./storage:/app/storage
+      - ./input:/app/input:ro
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2"
+        reservations:
+          memory: 1G
+          cpus: "1"
+      replicas: ${WORKER_REPLICAS:-2}
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Celery Beat (scheduler) - single instance
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sigmaflow-beat-prod
+    command: celery -A sigmaflow.worker_fixed.celery_app beat --loglevel=INFO --scheduler celery.beat.PersistentScheduler
+    environment:
+      - DATABASE_URL=${DATABASE_URL_ASYNC}
+      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+      - REDIS_URL=${REDIS_URL}
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - SECRET_KEY=${SECRET_KEY}
+      - SCHEDULER_ENABLED=${SCHEDULER_ENABLED:-true}
+      - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sigmaflow-internal
+    volumes:
+      - ./storage:/app/storage
+      - celery_beat_data:/app/celerybeat
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+        reservations:
+          memory: 128M
+          cpus: "0.1"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend (Next.js standalone)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sigmaflow-frontend-prod
+    command: node frontend/server.js
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.sigmaflow.example.com/api/v1}
+      - NEXT_PUBLIC_APP_NAME=${APP_NAME:-SigmaFlow}
+    ports:
+      - "127.0.0.1:3000:3000"  # Only bind to localhost
+    depends_on:
+      - api
+    networks:
+      - sigmaflow-external
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Reverse Proxy (optional - for SSL termination)
+  nginx:
+    image: nginx:alpine
+    container_name: sigmaflow-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - sigmaflow-external
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.1"
+        reservations:
+          memory: 64M
+          cpus: "0.05"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  celery_beat_data:
+    driver: local
+
+networks:
+  sigmaflow-internal:
+    driver: bridge
+    internal: true  # No external access
+  sigmaflow-external:
+    driver: bridge

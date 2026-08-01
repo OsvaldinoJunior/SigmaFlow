@@ -66,6 +66,11 @@ desktop.ini
 *.swp
 ~$*
 
+# ── Banco de dados local ──────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
 # ── Diretórios legados (lixo de refatoração) ──────────────────────────────────
 sigmaflow/alerts_old/
 sigmaflow/api_old/
