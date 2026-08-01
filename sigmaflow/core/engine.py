@@ -172,6 +172,14 @@ class Engine:
         if analyzer is None:
             logger.warning("No analyzer matched '%s'", path.name)
             result["errors"]["detect"] = "No registered analyzer matched."
+            # Still run advanced analyses even without a matched analyzer
+            result["dataset_type"] = "unknown"
+            fig_subdir = self.figures_dir / path.stem
+            log_stage("Running advanced analyses")
+            result["advanced"] = self._dispatch_advanced(df, path.stem, fig_subdir, result["plots"])
+            for key, adv in result["advanced"].items():
+                if isinstance(adv, dict) and "plots" in adv:
+                    result["plots"].extend(adv["plots"])
             return result
         result["dataset_type"] = analyzer.name
         logger.info("Detected type: %s | Problems: %s",
@@ -374,6 +382,34 @@ class Engine:
             except Exception as exc:
                 logger.error("Regression error: %s", exc)
                 advanced["regression"] = {"error": str(exc), "plots": []}
+
+        # ── Logistic Regression (binary/categorical target) ────────────────────
+        # Detect binary or low-cardinality categorical columns as potential targets
+        cat_cols = [c for c in df.columns if df[c].dtype in ("object", "category")]
+        binary_cols = [c for c in df.columns if df[c].nunique() == 2]
+        potential_targets = list(set(cat_cols + binary_cols))
+        if potential_targets and num_df.shape[1] >= 2:
+            # Try the first promising target
+            for target_col in potential_targets[:3]:  # Limit to first 3 candidates
+                try:
+                    from sigmaflow.analysis.logistic_regression import run_logistic_regression
+                    # Use all numeric columns as predictors (excluding target if numeric)
+                    predictor_cols = [c for c in num_df.columns if c != target_col]
+                    if len(predictor_cols) >= 1:
+                        log_stage(f"Running logistic regression (target: {target_col})")
+                        res = run_logistic_regression(
+                            df, 
+                            response_col=target_col, 
+                            predictor_cols=predictor_cols
+                        )
+                        if "error" not in res:
+                            plots = []  # Logistic regression doesn't generate plots yet
+                            advanced[f"logistic_regression_{target_col}"] = {**res, "plots": plots}
+                            print(f"     ✓ [LOGISTIC] {target_col}")
+                            break  # Only run once for the first valid target
+                except Exception as exc:
+                    logger.warning(f"Logistic regression failed for target {target_col}: {exc}")
+                    continue
 
         # ── DOE ───────────────────────────────────────────────────────────────
         cat_cols = [c for c in df.columns if df[c].dtype in ("object", "category")
