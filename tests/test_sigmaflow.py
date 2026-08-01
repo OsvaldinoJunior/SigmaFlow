@@ -319,3 +319,118 @@ class TestLogisticRegressionIntegration:
             assert "accuracy" in logistic_result, "Accuracy should be present"
             assert 0 <= logistic_result["auc"] <= 1, "AUC should be between 0 and 1"
             assert 0 <= logistic_result["accuracy"] <= 1, "Accuracy should be between 0 and 1"
+
+
+# ─── DOE Fractional Factorial / RSM Integration ─────────────────────────────────
+
+class TestDOEFractionalRSMIntegration:
+    """Tests for DOE fractional factorial and RSM integration."""
+
+    def test_fractional_factorial_method_explicit(self):
+        """DOEAnalyzer with method='fractional' should run fractional factorial analysis."""
+        from sigmaflow.analysis.doe_analysis import DOEAnalyzer
+        import tempfile
+        from pathlib import Path
+
+        np.random.seed(42)
+        k = 5
+        n = 16
+        factors = ['A', 'B', 'C', 'D', 'E']
+        design, generators = DOEAnalyzer.fractional_factorial_2k_p(k, 1)
+        data = {f: design[:, i] for i, f in enumerate(factors)}
+        data['response'] = np.random.normal(10, 1, n)
+        df = pd.DataFrame(data)
+
+        doe = DOEAnalyzer(df, response_col='response', factor_cols=factors, method='fractional')
+        result = doe.run()
+
+        assert "error" not in result
+        assert result.get("method") == "fractional"
+        assert "design" in result
+        assert "generators" in result
+        assert "fraction" in result
+        assert "2^" in result["fraction"]
+
+    def test_rsm_method_explicit(self):
+        """DOEAnalyzer with method='rsm' should run RSM analysis."""
+        from sigmaflow.analysis.doe_analysis import DOEAnalyzer
+        import tempfile
+        from pathlib import Path
+
+        np.random.seed(42)
+        k = 2
+        center_pts = 3
+        design = DOEAnalyzer.central_composite_design(k, center_points=center_pts)
+        factors = ['A', 'B']
+        data = {f: design[:, i] for i, f in enumerate(factors)}
+        data['response'] = np.random.normal(10, 1, 2**2 + 2*2 + 3)
+        df = pd.DataFrame(data)
+
+        doe = DOEAnalyzer(df, response_col='response', factor_cols=factors, method='rsm')
+        result = doe.run()
+
+        assert "error" not in result
+        assert result.get("method") == "rsm"
+        assert "r2" in result
+        assert "adj_r2" in result
+        assert "optimum" in result
+        assert "nature" in result
+
+    def test_method_suggestion_fractional(self):
+        """Engine should suggest fractional factorial when dataset matches pattern."""
+        from sigmaflow.analysis.doe_analysis import DOEAnalyzer
+
+        np.random.seed(42)
+        k = 5
+        n = 16
+        factors = ['A', 'B', 'C', 'D', 'E']
+        design, generators = DOEAnalyzer.fractional_factorial_2k_p(k, 1)
+        data = {f: design[:, i] for i, f in enumerate(factors)}
+        data['response'] = np.random.normal(10, 1, n)
+        df = pd.DataFrame(data)
+
+        doe = DOEAnalyzer(df, response_col='response', factor_cols=factors, method='anova')
+        result = doe.run()
+
+        suggestion = result.get("method_suggestion")
+        assert suggestion is not None
+        assert "fractional" in suggestion.lower()
+
+    def test_method_suggestion_ccd(self):
+        """Engine should suggest RSM when dataset matches CCD pattern."""
+        from sigmaflow.analysis.doe_analysis import DOEAnalyzer
+
+        np.random.seed(42)
+        k = 2
+        center_pts = 3
+        design = DOEAnalyzer.central_composite_design(k, center_points=3)
+        factors = ['A', 'B']
+        data = {f: design[:, i] for i, f in enumerate(factors)}
+        data['response'] = np.random.normal(10, 1, 2**2 + 2*2 + 3)
+        df = pd.DataFrame(data)
+
+        doe = DOEAnalyzer(df, response_col='response', factor_cols=factors, method='anova')
+        result = doe.run()
+
+        suggestion = result.get("method_suggestion")
+        assert suggestion is not None
+        assert "ccd" in suggestion.lower() or "central composite" in suggestion.lower()
+
+    def test_no_suggestion_for_generic_data(self):
+        """Engine should not suggest DOE methods for generic data."""
+        from sigmaflow.analysis.doe_analysis import DOEAnalyzer
+
+        np.random.seed(42)
+        n = 50
+        df = pd.DataFrame({
+            'feature1': np.random.normal(0, 1, n),
+            'feature2': np.random.normal(0, 1, n),
+            'feature3': np.random.normal(0, 1, n),
+            'response': np.random.normal(10, 1, n)
+        })
+
+        doe = DOEAnalyzer(df, response_col='response', factor_cols=['feature1', 'feature2', 'feature3'], method='anova')
+        result = doe.run()
+
+        suggestion = result.get("method_suggestion")
+        assert suggestion is None or suggestion == ""

@@ -58,7 +58,7 @@ ALPHA = 0.05
 class DOEAnalyzer:
     """
     One-way and two-way ANOVA for Design of Experiments analysis.
-
+    
     Parameters
     ----------
     df : pd.DataFrame
@@ -68,6 +68,10 @@ class DOEAnalyzer:
         Experimental factor columns. Auto-detected if None.
     alpha : float
         Significance level.
+    method : str, optional
+        Analysis method: "anova" (default), "fractional", or "rsm".
+        "fractional" uses 2^(k-p) fractional factorial design.
+        "rsm" uses Central Composite Design + quadratic response surface.
     """
 
     def __init__(
@@ -76,22 +80,45 @@ class DOEAnalyzer:
         response_col: Optional[str] = None,
         factor_cols:  Optional[List[str]] = None,
         alpha: float  = ALPHA,
+        method: str = "anova",
     ) -> None:
         self.df       = df.dropna()
         self.alpha    = alpha
         self._response = response_col
         self._factors  = factor_cols
+        self._method   = method
         self._results: Dict[str, Any] = {}
 
     def run(self) -> Dict[str, Any]:
-        """Run ANOVA and return results dict."""
+        """Run DOE analysis and return results dict."""
         response = self._resolve_response()
         factors  = self._resolve_factors(response)
 
         if not response or not factors:
             return {"error": "Need a response variable and at least one factor column."}
 
-        logger.info("DOE: response='%s', factors=%s", response, factors)
+        logger.info("DOE: response='%s', factors=%s, method='%s'", response, factors, self._method)
+
+        # ── Method dispatch ─────────────────────────────────────────────────────
+        if self._method == "fractional":
+            return self._run_fractional(response, factors)
+        elif self._method == "rsm":
+            return self._run_rsm(response)
+        else:
+            # Default: standard ANOVA
+            result = self._run_anova(response, factors)
+            
+            # Auto-suggest if dataset looks like a designed experiment
+            suggestion = self._suggest_method(factors)
+            if suggestion:
+                result["method_suggestion"] = suggestion
+            
+            return result
+
+    # ── Private: ANOVA (default method) ────────────────────────────────────────
+
+    def _run_anova(self, response: str, factors: List[str]) -> Dict[str, Any]:
+        """Run standard one-way and two-way ANOVA."""
         y = self.df[response].values.astype(float)
 
         # One-way ANOVA for each factor
@@ -115,6 +142,142 @@ class DOEAnalyzer:
             "alpha":              self.alpha,
         }
         return self._results
+
+    # ── Private: Fractional Factorial Design ───────────────────────────────────
+
+    def _run_fractional(self, response: str, factors: List[str]) -> Dict[str, Any]:
+        """Run fractional factorial analysis (2^(k-p) design)."""
+        y = self.df[response].values.astype(float)
+        k = len(factors)
+        
+        # For fractional factorial, we need at least 3 factors
+        if k < 3:
+            return {"error": "Fractional factorial requires at least 3 factors."}
+        
+        # Use p=1 (half-fraction) by default
+        p = 1
+        if len(self.df) < 2 ** (k - p):
+            return {"error": f"Insufficient runs for 2^({k}-{p}) design. Need at least {2 ** (k - p)} runs."}
+        
+        design, generators = self.fractional_factorial_2k_p(k, p)
+        
+        # Run standard ANOVA on the factors
+        y_vals = self.df[response].values.astype(float)
+        anova_rows = []
+        for factor in factors:
+            row = self._one_way_anova(y_vals, factor)
+            if row:
+                anova_rows.append(row)
+        
+        sig_factors = [r["factor"] for r in anova_rows if r["significant"]]
+        interp = self._build_interpretation(response, factors, sig_factors, anova_rows)
+        
+        self._results = {
+            "response":           response,
+            "factors":            factors,
+            "n":                  len(y_vals),
+            "anova_table":        anova_rows,
+            "significant_factors": sig_factors,
+            "interpretation":     interp,
+            "alpha":              self.alpha,
+            "method":             "fractional",
+            "design":             design.tolist(),
+            "generators":         generators,
+            "fraction":           f"2^({k}-{p})",
+        }
+        return self._results
+
+    # ── Private: Response Surface Methodology (RSM) ────────────────────────────
+
+    def _run_rsm(self, response: str) -> Dict[str, Any]:
+        """Run Response Surface Methodology with Central Composite Design."""
+        # Check if we already have RSM results
+        if not hasattr(self, '_rsm_results') or self._rsm_results is None:
+            self._rsm_results = self.fit_rsm()
+        
+        if "error" in self._rsm_results:
+            return self._rsm_results
+        
+        # Generate RSM plots
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paths = self.generate_rsm_plots(tmpdir)
+            self._rsm_results["plots"] = paths
+        
+        self._results = {
+            **self._rsm_results,
+            "method": "rsm",
+        }
+        return self._results
+
+    # ── Private: Method Suggestion ────────────────────────────────────────────────
+
+    def _suggest_method(self, factors: List[str]) -> Optional[str]:
+        """
+        Analyze factor columns to suggest if this looks like a designed experiment.
+        
+        Checks for:
+        - Factor values in {-1, 0, 1} (CCD) or {-1, 1} (full/fractional factorial)
+        - Number of runs consistent with 2^k, 2^(k-p), or CCD patterns
+        
+        Returns suggestion string or None.
+        """
+        if len(self.df) < 4:
+            return None
+        
+        # Check factor value patterns
+        factor_cols = [f for f in factors if f in self.df.columns]
+        if not factor_cols:
+            return None
+        
+        n_factors = len(factor_cols)
+        n_runs = len(self.df)
+        
+        # Check if all factor values are in {-1, 1} or {-1, 0, 1}
+        all_binary = True
+        all_ternary = True
+        for col in factor_cols:
+            unique_vals = set(self.df[col].dropna().unique())
+            if not unique_vals.issubset({-1, 1, -1.0, 1.0}):
+                all_binary = False
+            if not unique_vals.issubset({-1, 0, 1, -1.0, 0.0, 1.0}):
+                all_ternary = False
+        
+        # Full factorial: 2^k runs, all binary
+        if all_binary and n_runs == 2 ** n_factors:
+            return "This dataset has structure consistent with a full 2^{} factorial design — consider method='fractional' for explicit fractional factorial analysis.".format(len(factor_cols))
+        
+        # Fractional factorial: 2^(k-p) runs, all binary
+        if all_binary and n_runs < 2 ** n_factors:
+            # Find p such that 2^(k-p) ≈ n_runs
+            for p in range(1, n_factors):
+                expected = 2 ** (n_factors - p)
+                if expected == n_runs:
+                    return "This dataset has structure consistent with a 2^({}-{}) fractional factorial design ({} runs) — consider method='fractional' for explicit analysis.".format(n_factors, p, n_runs)
+        
+        # CCD: 2^k + 2*k + center_points runs, values include -alpha, -1, 0, 1, alpha
+        # Check if values are approximately in the CCD pattern
+        ccd_pattern = True
+        for col in factor_cols:
+            unique_vals = set(round(v, 4) for v in self.df[col].dropna().unique())
+            # Allow values approximately -alpha, -1, 0, 1, alpha where alpha = sqrt(k)
+            alpha = np.sqrt(n_factors)
+            expected_vals = {-alpha, -1, 0, 1, alpha}
+            # Check if all values are close to expected
+            for v in unique_vals:
+                if not any(abs(v - ev) < 0.001 for ev in expected_vals):
+                    ccd_pattern = False
+                    break
+            if not ccd_pattern:
+                break
+        
+        if ccd_pattern:
+            for center_pts in range(1, 6):
+                expected_ccd = 2 ** n_factors + 2 * n_factors + center_pts
+                if expected_ccd == n_runs:
+                    return "This dataset has structure consistent with a Central Composite Design (CCD) with {} center points ({} runs, {} factors) — consider method='rsm' for Response Surface Methodology.".format(center_pts, n_runs, n_factors)
+        
+        return None
 
     def generate_plots(self, fig_dir: str | Path) -> List[str]:
         """Generate main effects and interaction plots."""
@@ -489,8 +652,9 @@ class DOEAnalyzer:
             - nature: "maximum", "minimum", or "saddle"
             - predicted_optimum: predicted response at optimum
         """
+        # Run standard ANOVA first to get factors/response
         if not self._results:
-            self.run()
+            self._run_anova(self._resolve_response(), self._resolve_factors(self._resolve_response()))
 
         if "error" in self._results:
             return {"error": self._results["error"]}
