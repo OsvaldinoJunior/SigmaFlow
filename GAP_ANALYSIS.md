@@ -38,8 +38,8 @@
 | **MSA - Bias** | ❌ | Bias vs reference value (master sample). |
 | **MSA - Stability** | ❌ | Drift do sistema de medição ao longo do tempo (control chart de medições de referência). |
 | **Process Capability (Normal)** | ✅ | Cp, Cpk, Pp, Ppk, DPMO, sigma level. Shapiro-Wilk test integrado. |
-| **Capability - Non-Normal (Box-Cox / Johnson)** | ❌ | **Crítico**. Minitab faz auto-transformação Box-Cox/Johnson e calcula Cpk non-paramétrico (percentil method). SigmaFlow falha silenciosamente em dados não-normais. |
-| **Capability - Attribute (Binomial/Poisson)** | ❌ | DPMO para defectives (p-chart) e defects (c/u-chart). Não confundir com variável contínua. |
+| **Capability - Non-Normal (Box-Cox / Johnson)** | ✅ | **Implementado** em `capability_analysis.py` (`boxcox_transform`, `johnson_transform`). Auto-detecta não-normalidade, aplica transformação ótima, recalcula Cpk. |
+| **Capability - Attribute (Binomial/Poisson)** | ✅ | **Implementado** em `capability_analysis.py` (`p_chart`, `np_chart`, `c_chart`, `u_chart`). DPMO para defectives/defeitos com limites de controle corretos. |
 | **Control Charts - I-MR (XmR)** | ✅ | Western Electric Rules 1-4 + trend. CUSUM, EWMA também. |
 | **Control Charts - Xbar-R / Xbar-S** | ✅ | Para subgrupos. Falta: lógica de tamanho de subgrupo ótimo (n=2..10 vs >10). |
 | **Control Charts - Attributes (p, np, c, u)** | ❌ | **Gap crítico**. Para contagem de defeitos/defeitivos. Diferente de variáveis contínuas. |
@@ -63,11 +63,11 @@
 | **Power & Sample Size** | ❌ | Cálculo de poder estatístico, tamanho de amostra para testes de hipótese, DOE, capability. MBB sempre valida n antes de coletar dados. |
 | **Correlation / Simple Regression** | ✅ | Pearson, Spearman + OLS simples. R², p-values, residual plots. |
 | **Multiple Linear Regression** | ✅ | Stepwise, best subsets, VIF, residual diagnostics (normalidade, homocedasticidade, independência). |
-| **Logistic Regression (Binary/Ordinal/Nominal)** | ❌ | **Gap crítico**. Para Y binário (defectivo/sim-não) ou ordinal. Minitab faz stepwise, odds ratios, Hosmer-Lemeshow, ROC curve. |
+| **Logistic Regression (Binary/Ordinal/Nominal)** | ✅ | **Implementado** em `logistic_regression.py` (`BinaryLogisticRegression`, `OrdinalLogisticRegression`). Integrado ao pipeline via `Engine._dispatch_advanced()` — detecta targets binários/categóricos automaticamente. Testado com AUC/accuracy. |
 | **Nonlinear Regression** | ❌ | Modelos não-lineares customizados (ex: crescimento, decaimento, Michaelis-Menten). |
 | **DOE - Full Factorial** | ✅ | `DOEAnalyzer` com 2-level full factorial. Main effects + interactions. |
-| **DOE - Fractional Factorial** | ❌ | Resolution III/IV/V, alias structure, foldover. Essencial para screening com muitos fatores (custo↓). |
-| **DOE - Response Surface (RSM)** | ❌ | Central Composite Design (CCD), Box-Behnken. Otimização de curvatura. Minitab: contour/surface plots. |
+| **DOE - Fractional Factorial** | 🟡 | **Código existe** em `doe_analysis.py` (`fractional_factorial_2k_p`, `central_composite_design`, `fit_rsm`). **Não integrado** ao pipeline — aguardando critério de detecção seguro (ver item 3.2). |
+| **DOE - Response Surface (RSM)** | 🟡 | **Código existe** em `doe_analysis.py` (`central_composite_design`, `fit_rsm`). **Não integrado** — aguardando critério de detecção seguro. |
 | **DOE - Taguchi / Robust Design** | ❌ | Signal-to-noise ratio (S/N), dynamic/static, outer/inner arrays. Para robustez a ruído. |
 | **DOE - Mixture Designs** | ❌ | Para formulações (ingredientes que somam 100%). Simplex lattice/centroid. |
 | **DOE - Multi-Response Optimization** | ❌ | Desirability function (Derringer-Suich) para otimizar múltiplas Ys simultâneas. |
@@ -84,7 +84,7 @@
 
 | Ferramenta Metodológica | Status | Detalhes / Gap |
 |-------------------------|--------|----------------|
-| **DOE - Otimização (RSM)** | ❌ | Ver MEASURE/DOE section. Contour/surface plots, stationary point, ridge analysis. |
+| **DOE - Otimização (RSM)** | 🟡 | **Código existe** em `doe_analysis.py` (`central_composite_design`, `fit_rsm`). **Não integrado** — aguardando critério de detecção seguro. |
 | **Monte Carlo Simulation** | ❌ | **Gap crítico**. Propagação de incerteza: input distributions → output distribution. Sensitivity analysis (Tornado chart). Minitab: `Simulate Responses`. |
 | **Pugh Matrix (Concept Selection)** | ❌ | Critérios ponderados vs datum. Para seleção de soluções de melhoria. |
 | **Design for Six Sigma (DFSS) / DMADV** | ❌ | Metodologia completa para novo produto/processo. |
@@ -99,7 +99,7 @@
 | Ferramenta Metodológica | Status | Detalhes / Gap |
 |-------------------------|--------|----------------|
 | **Control Plan (Automated)** | 🟡 | `ControlPhase` gera itens básicos (variable, chart type, limits, frequency). **Falta**: linkage com FMEA (high RPN → special controls), reaction plan (what/when/who), special characteristics (CC/SC), gauge calibration schedule. |
-| **Western Electric Rules (8 rules)** | 🟡 | Regras 1-4 implementadas. **Faltam**: Regra 5 (2 of 3 > 2σ), Regra 6 (4 of 5 > 1σ), Regra 7 (15 in zone C), Regra 8 (8 on both sides of CL). |
+| **Western Electric Rules (8 rules)** | 🟡 | Regras 1-4 implementadas e testadas. **Faltam**: Regra 5 (2 of 3 > 2σ), Regra 6 (4 of 5 > 1σ), Regra 7 (15 in zone C), Regra 8 (8 on both sides of CL). Fix da Rule 3 aplicado (commit de7015c). |
 | **SPC Real-time / Auto-ingest** | 🟡 | Pipeline aceita CSV/Excel/SQL/API. **Falta**: OPC-UA, MQTT, Kafka, historian tags, streaming contínuo, alertas Webhooks/Teams/Slack. |
 | **Re-test Capability Post-Improvement** | ❌ | Comparação before/after com teste de equivalência (TOST) ou non-inferiority. Cpk delta com CI. |
 | **Short-term vs Long-term Capability** | 🟡 | Calcula Cp/Cpk (curto) e Pp/Ppk (longo). **Falta**: estudo de estabilidade temporal (re-test ao longo de semanas). |
@@ -144,13 +144,13 @@
 | Fase DMAIC | Total Ferramentas | ✅ Implementadas | 🟡 Parciais | ❌ Ausentes | Cobertura |
 |------------|-------------------|------------------|-------------|------------|-----------|
 | **DEFINE** | 7 | 2 | 1 | 4 | **29%** |
-| **MEASURE** | 18 | 6 | 2 | 10 | **33%** |
-| **ANALYZE** | 16 | 5 | 2 | 9 | **31%** |
-| **IMPROVE** | 7 | 1 | 0 | 6 | **14%** |
+| **MEASURE** | 18 | 8 | 2 | 8 | **44%** |
+| **ANALYZE** | 16 | 7 | 2 | 7 | **44%** |
+| **IMPROVE** | 7 | 1 | 2 | 4 | **29%** |
 | **CONTROL** | 7 | 1 | 3 | 3 | **29%** |
 | **LEAN** | 7 | 0 | 0 | 7 | **0%** |
 | **ESTATÍSTICA GERAL** | 10 | 2 | 1 | 7 | **20%** |
-| **TOTAL** | **72** | **22** | **9** | **46** | **~30%** |
+| **TOTAL** | **72** | **27** | **11** | **40** | **~37%** |
 
 ---
 
@@ -160,8 +160,8 @@
 |------------|------|------|-------------|------------------|------------|
 | **P0 - Crítico** | Capacidade não-normal (Box-Cox/Johnson) | MEASURE | 🔴 Bloqueia projetos reais | Médio | Muitos processos industriais não-normais |
 | **P0 - Crítico** | Gráficos de controle de atributos (p,np,c,u) | MEASURE | 🔴 Essencial para qualidade discreta | Médio | Defeitos vs defeitos é distinção fundamental |
-| **P0 - Crítico** | Regressão Logística (binária/ordinal) | ANALYZE | 🔴 Y binário é comum (defeitivo/sim-não) | Alto | Requer redesign do `RegressionAnalyzer` |
-| **P0 - Crítico** | DOE Fracionado + RSM | IMPROVE | 🔴 Otimização real precisa curvatura | Alto | Core do Improve phase |
+| **P0 - Crítico** | Regressão Logística (binária/ordinal) | ANALYZE | ✅ **RESOLVIDO** — Implementado e integrado (commit 2becdf4 + teste dfa3bd2) | — | — |
+| **P0 - Crítico** | DOE Fracionado + RSM | IMPROVE | 🟡 **Código existe** (restaurado e8aab6d), **não integrado** — aguardando critério de detecção seguro (item 3.2) | — | — |
 | **P0 - Crítico** | Simulação Monte Carlo | IMPROVE | 🔴 Propagação de incerteza / tolerâncias | Médio | Pode usar `numpy.random` + parallel |
 | **P1 - Alto** | Control Plan automático completo (FMEA link) | CONTROL | 🟡 Entregável final do projeto | Médio | Requer integração FMEA→Control Plan |
 | **P1 - Alto** | 8 Regras Western Electric completas | CONTROL | 🟡 Padrão AIAG | Baixo | Fix simples em `statistical_rules.py` |
@@ -185,38 +185,21 @@ Foco exclusivo em fechar gaps **P0/P1** do core estatístico antes de Web UI.
 ### Opção B: **Paralelo - Stage 2.5 + Stage 3** (6-8 semanas)
 - Core team (2-3 devs) foca em gaps estatísticos P0/P1
 - Frontend team (1-2 devs) inicia Web UI consumindo API atual
-- Sync semanal via API contract
-- Risco: API breaking changes se gaps exigirem redesign
-
-### Opção C: **Stage 3 First (Web UI)** → Stage 2.5 depois
-- Entrega valor visual rápido (dashboard, project management UI)
-- Gaps estatísticos ficam "under the hood" para usuários menos técnicos
-- Risco: MBBs reais vão testar e rejeitar se core estatístico fraco
-
----
-
-## MINHA RECOMENDAÇÃO: **Opção A (Stage 2.5 dedicado)**
-
-**Razão**: SigmaFlow se posiciona como "plataforma de automação DMAIC para empresas reais". Um Master Black Belt **não adotará** a ferramenta se:
-1. Não calcular Cpk correto em dados não-normais (Box-Cox/Johnson)
-2. Não tiver gráficos p/np/c/u para defeitos
-3. Não fizer regressão logística para Y binário
-4. Não tiver DOE fracionado + RSM para otimização
-
-Esses são **table stakes** para credibilidade técnica. A Web UI sem isso é "lipstick on a pig".
-
-**Sugestão de cronograma Stage 2.5 (4 sprints de 1 semana):**
-
-| Sprint | Foco | Entregáveis |
-|--------|------|-------------|
-| 1 | Capacidade não-normal + MSA Attribute | Box-Cox/Johnson transform, Kappa/Fleiss |
-| 2 | Gráficos de atributos + 8 regras WE | p/np/c/u charts, regras 5-8 |
-| 3 | Regressão Logística + DOE Fracionado/RSM | Binary/ordinal logistic, fractional factorial, CCD/Box-Behnken |
-| 4 | Monte Carlo + Control Plan completo | `SimulateResponse`, FMEA→Control Plan linkage, post-improvement capability comparison |
-
----
-
 ## PRÓXIMOS PASSOS IMEDIATOS
+
+1. **Corrigir test_rule_3** ✅ (feito — commit de7015c)
+2. **Rodar suite completa** ✅ (22/22 passing)
+3. **Regressão Logística** ✅ (integrado + testado — commits 2becdf4 + dfa3bd2)
+4. **DOE Fracionado + RSM** 🟡 — Código restaurado (e8aab6d), pendente critério de detecção (item 3.2)
+5. **Atualizar GAP_ANALYSIS.md** ✅ (este documento atualizado)
+
+---
+
+## DECISÃO PENDENTE: Item 3.2 — Critério de detecção DOE fracionado/RSM
+
+**Proposta** (ver discussão no item 3.2): detecção opt-in via padrão numérico exato (−1/0/+1, contagem de linhas consistente com 2^(k-p) ou CCD). Evita heurística solta.
+
+**Próximo passo**: Decidir se implementa esse critério no `DOEAnalyzer.run()` ou mantém como opt-in manual.
 
 1. **Corrigir test_rule_3** ✅ (feito)
 2. **Rodar suite completa** ✅ (21/21 passing)
