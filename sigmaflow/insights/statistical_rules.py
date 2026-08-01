@@ -209,8 +209,8 @@ class WesternElectricRules:
         for i in range(1, len(diffs)):
             if (diffs[i] > 0 and diffs[i - 1] > 0) or (diffs[i] < 0 and diffs[i - 1] < 0):
                 run += 1
-                if run == 6:
-                    starts.append(int(i - 5))
+                if run == 5:  # 5 consecutive diffs = 6 points trending
+                    starts.append(int(i - 4))
             else:
                 run = 1
         return starts
