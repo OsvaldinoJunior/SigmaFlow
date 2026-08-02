@@ -28,6 +28,13 @@ def get_sync_engine():
     """Get or create the synchronous database engine."""
     global _sync_engine
     if _sync_engine is None:
+        # Ensure data directory exists for SQLite
+        from pathlib import Path
+        db_url = settings.database_url_sync
+        if db_url.startswith("sqlite:///"):
+            db_path = db_url.replace("sqlite:///", "")
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        
         _sync_engine = create_engine(
             settings.database_url_sync,
             pool_size=settings.db_pool_size,
@@ -102,6 +109,13 @@ def get_async_engine():
     """Get or create the asynchronous database engine."""
     global _async_engine
     if _async_engine is None:
+        # Ensure data directory exists for SQLite
+        from pathlib import Path
+        db_url = settings.database_url_async
+        if db_url.startswith("sqlite+aiosqlite:///"):
+            db_path = db_url.replace("sqlite+aiosqlite:///", "")
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        
         _async_engine = create_async_engine(
             settings.database_url_async,
             pool_size=settings.db_pool_size,
@@ -129,15 +143,36 @@ def get_async_session_factory() -> async_sessionmaker:
     return _AsyncSessionLocal
 
 
-@asynccontextmanager
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Context manager for asynchronous database sessions.
-    Use in FastAPI dependency injection.
+    FastAPI dependency for asynchronous database sessions.
+    Use with Depends() in FastAPI route handlers.
 
     Usage:
         @app.get("/items")
         async def get_items(session: AsyncSession = Depends(get_async_session)):
+            ...
+    """
+    factory = get_async_session_factory()
+    session = factory()
+    try:
+        yield session
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
+
+
+@asynccontextmanager
+async def get_async_session_context() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Context manager for asynchronous database sessions.
+    Use for manual session management (not FastAPI Depends).
+
+    Usage:
+        async with get_async_session_context() as session:
             ...
     """
     factory = get_async_session_factory()

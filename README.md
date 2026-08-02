@@ -188,6 +188,23 @@ cd sigmaflow
 pip install -e .
 ```
 
+### Configuração do Banco de Dados
+
+O SigmaFlow usa SQLite por padrão para desenvolvimento. O arquivo do banco é criado automaticamente em `./data/sigmaflow.db` (diretório não versionado).
+
+```bash
+# Copie o arquivo de exemplo e ajuste se necessário
+cp .env.example .env
+
+# O diretório ./data/ será criado automaticamente na primeira execução
+```
+
+Para PostgreSQL em produção, edite `.env`:
+```bash
+DATABASE_URL_SYNC=postgresql+psycopg2://user:pass@host:port/dbname
+DATABASE_URL_ASYNC=postgresql+asyncpg://user:pass@host:port/dbname
+```
+
 ### Apenas dependências
 
 ```bash
