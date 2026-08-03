@@ -9,6 +9,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+import uuid
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,9 +31,17 @@ from sigmaflow.worker.celery_app import celery_app
 
 settings = get_settings()
 
-# Password hashing
-from passlib.context import CryptContext
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - use bcrypt directly to avoid passlib bcrypt bug
+import bcrypt
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 # JWT
 from jose import jwt, JWTError
@@ -66,11 +75,11 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     email: str
     full_name: str
     role: UserRole
-    plant_id: Optional[str]
+    plant_id: Optional[uuid.UUID]
     is_active: bool
     is_superuser: bool
     created_at: datetime
@@ -87,7 +96,7 @@ class PlantCreate(BaseModel):
 
 
 class PlantResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     code: str
     name: str
     country: str
@@ -102,19 +111,19 @@ class PlantResponse(BaseModel):
 class ProjectCreate(BaseModel):
     code: str
     name: str
-    plant_id: str
-    owner_id: str
+    plant_id: uuid.UUID
+    owner_id: uuid.UUID
     description: Optional[str] = None
     problem_statement: Optional[str] = None
     goal_statement: Optional[str] = None
 
 
 class ProjectResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     code: str
     name: str
-    plant_id: str
-    owner_id: str
+    plant_id: uuid.UUID
+    owner_id: uuid.UUID
     description: Optional[str]
     problem_statement: Optional[str]
     goal_statement: Optional[str]
@@ -134,8 +143,8 @@ class DatasetCreate(BaseModel):
 
 
 class DatasetResponse(BaseModel):
-    id: str
-    project_id: str
+    id: uuid.UUID
+    project_id: uuid.UUID
     name: str
     description: Optional[str]
     version: int
@@ -156,9 +165,9 @@ class RunCreate(BaseModel):
 
 
 class RunResponse(BaseModel):
-    id: str
-    project_id: str
-    dataset_id: Optional[str]
+    id: uuid.UUID
+    project_id: uuid.UUID
+    dataset_id: Optional[uuid.UUID]
     run_number: int
     status: RunStatus
     triggered_by: str
@@ -175,8 +184,8 @@ class RunResponse(BaseModel):
 
 
 class InsightResponse(BaseModel):
-    id: str
-    run_id: str
+    id: uuid.UUID
+    run_id: uuid.UUID
     phase: Optional[PhaseName]
     rule_id: str
     description: str
@@ -190,25 +199,25 @@ class InsightResponse(BaseModel):
 
 
 class ActionItemCreate(BaseModel):
-    project_id: str
+    project_id: uuid.UUID
     title: str
     description: Optional[str] = None
     category: Optional[str] = None
     priority: int = 1
-    assignee_id: Optional[str] = None
+    assignee_id: Optional[uuid.UUID] = None
     due_date: Optional[datetime] = None
 
 
 class ActionItemResponse(BaseModel):
-    id: str
-    project_id: str
-    insight_id: Optional[str]
+    id: uuid.UUID
+    project_id: uuid.UUID
+    insight_id: Optional[uuid.UUID]
     title: str
     description: Optional[str]
     category: Optional[str]
     priority: int
     status: ActionStatus
-    assignee_id: Optional[str]
+    assignee_id: Optional[uuid.UUID]
     due_date: Optional[datetime]
     created_at: datetime
 
@@ -241,12 +250,7 @@ class ScheduledRunResponse(BaseModel):
 
 # ── Auth Helpers ──────────────────────────────────────────────────────────────
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+# Already defined above using bcrypt directly
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -275,8 +279,15 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-
-    result = await session.execute(select(User).filter(User.id == user_id))
+    
+    # Convert string UUID to UUID object for database query
+    import uuid
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise credentials_exception
+    
+    result = await session.execute(select(User).filter(User.id == user_uuid))
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception
@@ -297,6 +308,25 @@ async def get_current_active_user(
 async def lifespan(app: FastAPI):
     # Startup
     init_db()
+    
+    # Auto-seed demo data in development if database is empty
+    if settings.environment == "development":
+        from sigmaflow.core.database import get_sync_session
+        with get_sync_session() as session:
+            user_count = session.execute(select(func.count(User.id))).scalar()
+            if user_count == 0:
+                import asyncio
+                import sys
+                # Import here to avoid circular imports
+                sys.path.insert(0, "load-tests")
+                from seed_test_data import seed_database
+                try:
+                    # Run synchronously since we're in lifespan startup
+                    await seed_database()
+                    print("✅ Demo data seeded automatically (development mode)")
+                except Exception as e:
+                    print(f"⚠️  Failed to auto-seed demo data: {e}")
+    
     yield
     # Shutdown
     close_db_connections()
@@ -374,7 +404,8 @@ async def login(
         expires_delta=timedelta(days=7),
     )
 
-    user.last_login = datetime.now(timezone.utc)
+    # Skip last_login update to avoid StaleDataError with onupdate=func.now()
+    # user.last_login = datetime.now(timezone.utc)
     await session.commit()
 
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
@@ -414,6 +445,44 @@ async def get_plant(plant_id: str, session: AsyncSession = Depends(get_async_ses
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
     return plant
+
+
+# ── User Endpoints ────────────────────────────────────────────────────────────
+
+@app.get("/api/v1/users", response_model=list[UserResponse])
+async def list_users(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List users in the same tenant as the current user."""
+    # Only ADMIN and MBB can list all users in tenant
+    if current_user.role not in (UserRole.ADMIN, UserRole.MASTER_BLACK_BELT):
+        # Other roles see only themselves or users in their plant
+        query = select(User).filter(User.id == current_user.id)
+    else:
+        query = select(User).filter(User.tenant_id == current_user.tenant_id)
+    result = await session.execute(query)
+    return result.scalars().all()
+
+
+@app.get("/api/v1/users/{user_id}", response_model=UserResponse)
+async def get_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get a specific user (must be in same tenant or be self)."""
+    result = await session.execute(select(User).filter(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Check tenant access
+    if user.tenant_id != current_user.tenant_id:
+        raise HTTPException(status_code=403, detail="User not in your tenant")
+    # Non-admins can only see themselves
+    if current_user.role not in (UserRole.ADMIN, UserRole.MASTER_BLACK_BELT) and user.id != current_user.id:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    return user
 
 
 # ── Project Endpoints ─────────────────────────────────────────────────────────
@@ -727,7 +796,7 @@ async def info():
 
 async def check_db_connection_async() -> bool:
     try:
-        async with get_async_session() as session:
+        async with get_async_session_context() as session:
             await session.execute(select(1))
         return True
     except Exception:
