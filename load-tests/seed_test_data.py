@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
-from passlib.context import CryptContext
+import bcrypt
 
 from sigmaflow.core.config import get_settings
 from sigmaflow.core.database import get_async_engine
@@ -25,7 +25,16 @@ from sigmaflow.core.models import (
 )
 
 settings = get_settings()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Password hashing - use bcrypt directly to avoid passlib bcrypt bug
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 # Test data configuration
 TENANTS_DATA = [
@@ -85,10 +94,6 @@ USERS_PER_TENANT = 5
 USER_PASSWORD = "Test123!"
 ADMIN_EMAIL = "admin@sigmaflow.com"
 ADMIN_PASSWORD = "Admin123!"
-
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
 
 
 async def seed_database():
