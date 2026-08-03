@@ -13,12 +13,13 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
 from passlib.context import CryptContext
 
 from sigmaflow.core.config import get_settings
+from sigmaflow.core.database import get_async_engine
 from sigmaflow.core.models import (
     Tenant, Plant, User, UserRole
 )
@@ -81,9 +82,9 @@ PLANT_DATA = {
 }
 
 USERS_PER_TENANT = 5
-USER_PASSWORD = "TestPass123!"
+USER_PASSWORD = "Test123!"
 ADMIN_EMAIL = "admin@sigmaflow.com"
-ADMIN_PASSWORD = "AdminPass123!"
+ADMIN_PASSWORD = "Admin123!"
 
 
 def get_password_hash(password: str) -> str:
@@ -93,8 +94,13 @@ def get_password_hash(password: str) -> str:
 async def seed_database():
     """Seed the database with test data."""
     
-    # Create async engine
-    engine = create_async_engine(settings.database_url, echo=True)
+    # Create async engine using shared function (handles data/ directory creation)
+    engine = get_async_engine()
+    
+    # Initialize database tables
+    from sigmaflow.core.database import init_db_async
+    await init_db_async()
+    
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     
     async with async_session() as session:
@@ -167,7 +173,7 @@ async def seed_database():
                     print(f"  User {email} already exists, skipping...")
                 else:
                     # Assign roles: user1=ADMIN, user2=MBB, user3=BLACK_BELT, user4=GREEN_BELT, user5=VIEWER
-                    roles = [UserRole.ADMIN, UserRole.MBB, UserRole.BLACK_BELT, UserRole.GREEN_BELT, UserRole.VIEWER]
+                    roles = [UserRole.ADMIN, UserRole.MASTER_BLACK_BELT, UserRole.BLACK_BELT, UserRole.GREEN_BELT, UserRole.VIEWER]
                     role = roles[i - 1]
                     
                     user = User(
