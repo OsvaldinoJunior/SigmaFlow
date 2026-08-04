@@ -259,7 +259,9 @@ class DOEAnalyzer:
         # Check if values are approximately in the CCD pattern
         ccd_pattern = True
         for col in factor_cols:
-            unique_vals = set(round(v, 4) for v in self.df[col].dropna().unique())
+            # Ensure numeric values for rounding
+            col_data = pd.to_numeric(self.df[col], errors='coerce').dropna()
+            unique_vals = set(round(v, 4) for v in col_data.unique())
             # Allow values approximately -alpha, -1, 0, 1, alpha where alpha = sqrt(k)
             alpha = np.sqrt(n_factors)
             expected_vals = {-alpha, -1, 0, 1, alpha}

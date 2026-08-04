@@ -488,23 +488,33 @@ async def get_user(
 # ── Project Endpoints ─────────────────────────────────────────────────────────
 
 @app.post("/api/v1/projects", response_model=ProjectResponse)
-async def create_project(project: ProjectCreate, session: AsyncSession = Depends(get_async_session)):
-    # Validate plant
-    result = await session.execute(select(Plant).filter(Plant.id == project.plant_id))
+async def create_project(
+    project: ProjectCreate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    # Validate plant (must be in user's tenant)
+    result = await session.execute(
+        select(Plant).filter(Plant.id == project.plant_id, Plant.tenant_id == current_user.tenant_id)
+    )
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Plant not found")
 
-    # Validate owner
-    result = await session.execute(select(User).filter(User.id == project.owner_id))
+    # Validate owner (must be in user's tenant)
+    result = await session.execute(
+        select(User).filter(User.id == project.owner_id, User.tenant_id == current_user.tenant_id)
+    )
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Owner not found")
 
-    # Check code unique
-    result = await session.execute(select(Project).filter(Project.code == project.code))
+    # Check code unique within tenant
+    result = await session.execute(
+        select(Project).filter(Project.code == project.code, Project.tenant_id == current_user.tenant_id)
+    )
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Project code already exists")
 
-    new_project = Project(**project.model_dump())
+    new_project = Project(**project.model_dump(), tenant_id=current_user.tenant_id)
     session.add(new_project)
     await session.commit()
     await session.refresh(new_project)
@@ -516,8 +526,9 @@ async def list_projects(
     plant_id: Optional[str] = None,
     status: Optional[str] = None,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
 ):
-    query = select(Project)
+    query = select(Project).filter(Project.tenant_id == current_user.tenant_id)
     if plant_id:
         query = query.filter(Project.plant_id == plant_id)
     if status:
@@ -527,8 +538,19 @@ async def list_projects(
 
 
 @app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str, session: AsyncSession = Depends(get_async_session)):
-    result = await session.execute(select(Project).filter(Project.id == project_id))
+async def get_project(
+    project_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    import uuid
+    try:
+        project_uuid = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
+    result = await session.execute(
+        select(Project).filter(Project.id == project_uuid, Project.tenant_id == current_user.tenant_id)
+    )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -542,12 +564,20 @@ async def create_dataset(
     project_id: str,
     dataset: DatasetCreate,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
 ):
-    result = await session.execute(select(Project).filter(Project.id == project_id))
+    import uuid
+    try:
+        project_uuid = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
+    result = await session.execute(
+        select(Project).filter(Project.id == project_uuid, Project.tenant_id == current_user.tenant_id)
+    )
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="Project not found")
 
-    new_dataset = Dataset(project_id=project_id, **dataset.model_dump())
+    new_dataset = Dataset(project_id=project_uuid, tenant_id=current_user.tenant_id, **dataset.model_dump())
     session.add(new_dataset)
     await session.commit()
     await session.refresh(new_dataset)
@@ -555,10 +585,20 @@ async def create_dataset(
 
 
 @app.get("/api/v1/projects/{project_id}/datasets", response_model=list[DatasetResponse])
-async def list_datasets(project_id: str, session: AsyncSession = Depends(get_async_session)):
+async def list_datasets(
+    project_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    import uuid
+    try:
+        project_uuid = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
     result = await session.execute(
         select(Dataset).filter(
-            Dataset.project_id == project_id,
+            Dataset.project_id == project_uuid,
+            Dataset.tenant_id == current_user.tenant_id,
             Dataset.is_active == True
         ).order_by(Dataset.created_at.desc())
     )
@@ -629,8 +669,14 @@ async def list_runs(
     status: Optional[RunStatus] = None,
     limit: int = Query(50, le=100),
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
 ):
-    query = select(Run).filter(Run.project_id == project_id)
+    import uuid
+    try:
+        project_uuid = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
+    query = select(Run).filter(Run.project_id == project_uuid, Run.tenant_id == current_user.tenant_id)
     if status:
         query = query.filter(Run.status == status)
     query = query.order_by(Run.created_at.desc()).limit(limit)
@@ -639,8 +685,19 @@ async def list_runs(
 
 
 @app.get("/api/v1/runs/{run_id}", response_model=RunResponse)
-async def get_run(run_id: str, session: AsyncSession = Depends(get_async_session)):
-    result = await session.execute(select(Run).filter(Run.id == run_id))
+async def get_run(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    import uuid
+    try:
+        run_uuid = uuid.UUID(run_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid run ID format")
+    result = await session.execute(
+        select(Run).filter(Run.id == run_uuid, Run.tenant_id == current_user.tenant_id)
+    )
     run = result.scalar_one_or_none()
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
@@ -648,9 +705,21 @@ async def get_run(run_id: str, session: AsyncSession = Depends(get_async_session
 
 
 @app.get("/api/v1/runs/{run_id}/insights", response_model=list[InsightResponse])
-async def get_run_insights(run_id: str, session: AsyncSession = Depends(get_async_session)):
+async def get_run_insights(
+    run_id: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    import uuid
+    try:
+        run_uuid = uuid.UUID(run_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid run ID format")
     result = await session.execute(
-        select(Insight).filter(Insight.run_id == run_id).order_by(Insight.created_at.desc())
+        select(Insight)
+        .join(Run, Insight.run_id == Run.id)
+        .filter(Insight.run_id == run_uuid, Run.tenant_id == current_user.tenant_id)
+        .order_by(Insight.created_at.desc())
     )
     return result.scalars().all()
 
@@ -658,8 +727,19 @@ async def get_run_insights(run_id: str, session: AsyncSession = Depends(get_asyn
 # ── Action Items Endpoints ────────────────────────────────────────────────────
 
 @app.post("/api/v1/action-items", response_model=ActionItemResponse)
-async def create_action_item(item: ActionItemCreate, session: AsyncSession = Depends(get_async_session)):
-    new_item = ActionItem(**item.model_dump())
+async def create_action_item(
+    item: ActionItemCreate,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    # Verify project belongs to user's tenant
+    result = await session.execute(
+        select(Project).filter(Project.id == item.project_id, Project.tenant_id == current_user.tenant_id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    new_item = ActionItem(**item.model_dump(), tenant_id=current_user.tenant_id)
     session.add(new_item)
     await session.commit()
     await session.refresh(new_item)
@@ -672,12 +752,18 @@ async def list_action_items(
     status: Optional[ActionStatus] = None,
     assignee_id: Optional[str] = None,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
 ):
-    query = select(ActionItem).filter(ActionItem.project_id == project_id)
+    import uuid
+    try:
+        project_uuid = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid project ID format")
+    query = select(ActionItem).filter(ActionItem.project_id == project_uuid, ActionItem.tenant_id == current_user.tenant_id)
     if status:
         query = query.filter(ActionItem.status == status)
     if assignee_id:
-        query = query.filter(ActionItem.assignee_id == assignee_id)
+        query = query.filter(ActionItem.assignee_id == uuid.UUID(assignee_id))
     result = await session.execute(query.order_by(ActionItem.priority, ActionItem.due_date))
     return result.scalars().all()
 
@@ -691,8 +777,16 @@ async def update_action_item(
     evidence_urls: Optional[list[str]] = None,
     verification_notes: Optional[str] = None,
     session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_user),
 ):
-    result = await session.execute(select(ActionItem).filter(ActionItem.id == item_id))
+    import uuid
+    try:
+        item_uuid = uuid.UUID(item_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid action item ID format")
+    result = await session.execute(
+        select(ActionItem).filter(ActionItem.id == item_uuid, ActionItem.tenant_id == current_user.tenant_id)
+    )
     item = result.scalar_one_or_none()
     if not item:
         raise HTTPException(status_code=404, detail="Action item not found")
