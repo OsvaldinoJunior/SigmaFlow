@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatório de análises — SigmaFlow</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/upload.css">
+  <link rel="stylesheet" href="/report.css">
+  <link rel="stylesheet" href="/project-report.css">
+  <script src="/charts.js" defer></script>
+  <script src="/report.js" defer></script>
+</head>
+<body class="report-body">
+  <header class="report-bar"><div class="report-brand">σ &nbsp; Sigma<strong>Flow</strong></div><span>RELATÓRIO DE ANÁLISES</span><button type="button" id="print-report">Imprimir / salvar em PDF</button></header>
+  <main class="report-page">
+    <div class="report-kicker">SIGMAFLOW &nbsp; / &nbsp; MELHORIA CONTÍNUA</div>
+    <h1>Relatório de<br><em>análise do processo.</em></h1>
+    <p class="report-intro">Uma visão dos dados, resultados e próximos passos para apoiar a investigação.</p>
+    <div id="report-export-info" hidden></div>
+    <div class="report-meta" id="report-meta"></div>
+    <div class="report-objective" id="report-objective"></div>
+    <div id="data-quality-report"></div>
+    <div id="project-report"></div>
+    <div class="report-empty" id="report-empty" hidden>Nenhuma análise foi encontrada nesta aba. Volte ao diagnóstico, execute uma oportunidade e clique em <strong>Ver relatório das análises</strong>.</div>
+    <div id="report-content"></div>
+    <footer class="report-footer">Relatório gerado localmente · Revise os dados e pressupostos com o responsável pelo processo.</footer>
+  </main>
+</body>
+</html>

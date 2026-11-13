@@ -47,10 +47,6 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 
@@ -175,6 +171,9 @@ class FMEAAnalyzer:
 
     def _plot_rpn_ranking(self, fig_dir: Path) -> str:
         """Horizontal bar chart of RPN values, color-coded by risk level."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
         modes  = self._results["ranked_modes"]
         top_n  = modes[:15]
         labels = [m["failure_mode"] for m in top_n]
@@ -212,6 +211,10 @@ class FMEAAnalyzer:
 
     def _plot_risk_matrix(self, fig_dir: Path) -> str:
         """Severity × Occurrence risk matrix with RPN bubbles."""
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
         modes = self._results["ranked_modes"]
 
         fig, ax = plt.subplots(figsize=(9, 7))

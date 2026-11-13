@@ -14,6 +14,7 @@ New in v10
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -63,6 +64,22 @@ class Engine:
         setup_logging(log_dir=self.logs_dir, level="INFO")
 
     def run(self) -> List[Dict[str, Any]]:
+        # A fresh file handler supports repeated runs; close it even on failure
+        # so callers can rotate, archive, or remove the output directory.
+        setup_logging(log_dir=self.logs_dir, level="INFO")
+        try:
+            return self._run_pipeline()
+        finally:
+            root_logger = logging.getLogger("sigmaflow")
+            for handler in root_logger.handlers[:]:
+                if isinstance(handler, logging.FileHandler):
+                    root_logger.removeHandler(handler)
+                    try:
+                        handler.flush()
+                    finally:
+                        handler.close()
+
+    def _run_pipeline(self) -> List[Dict[str, Any]]:
         files = self._scan()
         if not files:
             logger.warning("No supported files in '%s'", self.input_dir)

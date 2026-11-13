@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SigmaFlow — Diagnóstico de processos</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/upload.css">
+  <link rel="stylesheet" href="/case-workspace.css">
+  <script src="/charts.js" defer></script>
+  <script src="/case-store.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">σ</span><span>Sigma<span class="brand-light">Flow</span><small>INTELIGÊNCIA DE PROCESSOS</small></span></div>
+      <div class="workspace-label">ÁREA DE TRABALHO</div>
+      <nav aria-label="Navegação"><a class="nav-active" href="#diagnostico"><span>◫</span> Diagnóstico <i>01</i></a><a href="#resultados"><span>◇</span> Sugestões</a><a href="#mapeamento"><span>▦</span> Dados identificados</a></nav>
+      <div class="sidebar-note"><span class="online-dot"></span> Ambiente local <p>Seus arquivos são processados neste computador.</p></div>
+      <div class="sidebar-footer">SIGMAFLOW <span>·</span> VERSÃO DE TESTE</div>
+    </aside>
+    <main class="main" id="diagnostico">
+      <header class="topbar"><div><span class="breadcrumb">ÁREA DE TRABALHO</span><span class="crumb-sep">/</span><strong>Diagnóstico</strong></div><div class="top-right"><span class="local-badge"><span class="online-dot"></span> Ambiente local</span><span class="avatar">BB</span></div></header>
+      <section class="content">
+        <div class="eyebrow"><span></span> ASSISTENTE DE MELHORIA CONTÍNUA</div>
+        <div class="heading-row"><div><h1>Encontre oportunidades<br><em>nos seus dados.</em></h1><p class="intro">Conte o que você quer melhorar e adicione seus dados. O SigmaFlow identifica caminhos para investigar seu processo.</p></div><div class="heading-symbol" aria-hidden="true"><div>∑</div><span>DA INFORMAÇÃO<br>À MELHORIA</span></div></div>
+        <div class="steps"><div class="step active" data-step="1"><span>01</span> Contexto e dados</div><div class="step-line"></div><div class="step" data-step="2"><span>02</span> Revisar colunas</div><div class="step-line"></div><div class="step" data-step="3"><span>03</span> Escolher oportunidade</div><div class="step-line"></div><div class="step" data-step="4"><span>04</span> Resultados e relatório</div></div>
+        <div class="input-grid">
+          <section class="panel context-panel"><div class="panel-heading"><div class="number">01</div><div><h2>Qual é o desafio?</h2><p>Descreva brevemente o que você quer melhorar.</p></div></div><label for="objective">OBJETIVO DO PROJETO <span>OPCIONAL</span></label><textarea id="objective" maxlength="2000" placeholder="Ex.: Reduzir o refugo na linha de envase e entender as diferenças entre turnos."></textarea><div class="helper">Uma descrição ajuda a priorizar as sugestões.</div><div class="context-bottom"><span class="tiny-icon">✦</span><p><strong>Não sabe por onde começar?</strong><br>Você pode começar apenas com seus dados.</p></div></section>
+          <section class="panel upload-panel"><div class="panel-heading"><div class="number">02</div><div><h2>Adicione seus dados</h2><p>Selecione uma planilha e clique em Analisar planilha.</p></div></div><div class="dropzone" id="dropzone"><span class="upload-icon" aria-hidden="true">↑</span><strong id="file-label" aria-live="polite">Nenhuma planilha selecionada</strong><span>Arraste seu arquivo até aqui ou</span><button type="button" class="choose-button" id="choose-computer">Selecionar planilha no computador</button><small>CSV, XLSX ou XLS · até 10 MB</small><details class="browser-selector"><summary>Selecionar pelo navegador</summary><label class="file-label" for="file">Escolha um arquivo</label><input id="file" class="file-input" type="file" accept=".csv,.xlsx,.xls" aria-label="Selecionar planilha pelo navegador"></details></div><div class="upload-actions"><button type="button" class="example-button" id="example">↗ &nbsp; Usar dados de exemplo</button><button type="button" class="primary-button" id="analyze">Analisar planilha <span>→</span></button></div><p class="privacy">◉ &nbsp; Os dados são processados neste computador.</p></section>
+        </div>
+        <section class="saved-projects" aria-label="Projetos locais salvos">
+          <div><strong>Retomar um projeto salvo</strong><p>Projetos e planilhas ficam na pasta local do SigmaFlow neste computador.</p></div>
+          <select id="saved-project-list" aria-label="Projeto salvo"><option value="">Nenhum projeto salvo</option></select>
+          <button type="button" class="outline-button" id="load-project" disabled>Abrir</button>
+          <button type="button" class="outline-button" id="history-project" disabled>Histórico</button>
+          <button type="button" class="text-button danger-text" id="delete-project" disabled>Excluir</button>
+        </section>
+        <section id="project-history" class="project-history" aria-labelledby="history-title" hidden>
+          <div class="history-heading"><div><h2 id="history-title">Histórico do projeto</h2><p id="history-context"></p></div><div class="history-buttons"><button type="button" class="outline-button" id="history-refresh">Atualizar histórico</button><button type="button" class="text-button" id="history-close">Fechar histórico</button></div></div>
+          <p class="analysis-note">A consulta mostra registros salvos, sem recalcular ou substituir a planilha, as análises e as anotações em edição. Restaurar cria uma revisão; copiar cria outro projeto. Versões intermediárias são preservadas.</p>
+          <p id="history-status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div id="history-list"></div>
+          <button type="button" class="outline-button" id="history-older" hidden>Carregar versões mais antigas</button>
+          <div id="history-inspection" class="history-inspection" hidden></div>
+          <form id="history-recovery" class="history-recovery" hidden>
+            <h3 id="history-recovery-title"></h3><p id="history-recovery-description"></p>
+            <label id="history-copy-title-label">Nome do novo projeto (opcional)<input id="history-copy-title" maxlength="160" placeholder="Título da cópia"></label>
+            <label>Motivo desta operação<textarea id="history-recovery-reason" rows="3" maxlength="2000" required placeholder="Explique por que esta versão deve originar uma cópia ou uma nova revisão."></textarea></label>
+            <p id="history-recovery-status" role="status" aria-live="polite"></p>
+            <div class="history-buttons"><button type="submit" class="primary-button" id="history-recovery-confirm">Confirmar</button><button type="button" class="text-button" id="history-recovery-cancel">Cancelar</button></div>
+          </form>
+          <button type="button" class="outline-button" id="history-open-created" hidden>Abrir projeto criado</button>
+        </section>
+        <p class="error" role="alert" id="error" hidden></p>
+        <section class="results" id="results" hidden aria-live="polite">
+          <div class="section-title" id="mapeamento"><div><div class="eyebrow"><span></span> LEITURA DOS DADOS</div><h2>Resultados da planilha<span class="title-dot">.</span></h2><p id="result-file"></p><p>Veja o resumo dos dados, as sugestões e confira o mapeamento das colunas.</p></div><button class="outline-button" id="reanalyze">Atualizar sugestões ↻</button></div>
+          <div class="metrics"><div><small>REGISTROS</small><strong id="row-count">—</strong></div><div><small>COLUNAS</small><strong id="col-count">—</strong></div><div><small>COLUNAS NUMÉRICAS</small><strong id="numeric-count">—</strong></div><div><small>CÉLULAS VAZIAS</small><strong id="missing-count">—</strong></div></div>
+          <details class="data-preview" open><summary>Prévia dos dados <span>Primeiras 5 linhas ▾</span></summary><div class="table-wrap"><table id="preview"></table></div></details>
+          <details class="data-preview" id="numeric-section" open><summary>Resumo das colunas numéricas <span>Valores presentes ▾</span></summary><p class="summary-caption">Mínimo, média e máximo calculados com os valores numéricos disponíveis.</p><div class="table-wrap"><table id="numeric-summary"></table></div></details>
+          <details class="mapping"><summary>Revisar mapeamento das colunas <span>Abra para corrigir ▾</span></summary><p>Uma associação automática é apenas uma sugestão. Se não corresponder, selecione a coluna correta ou “Não informada” e clique em Atualizar sugestões.</p><div id="mapping-fields" class="mapping-grid"></div><p id="mapping-notice" hidden>Mapeamento alterado. Clique em Atualizar sugestões antes de executar uma análise.</p><button class="outline-button mapping-update" type="button" id="reanalyze-bottom">Atualizar sugestões ↻</button></details>
+          <div class="journey-actions"><button type="button" class="primary-button" id="show-opportunities">Ver oportunidades <span>↓</span></button><button type="button" class="report-link" id="report-link" hidden>Ver relatório das análises →</button></div>
+          <div class="section-title suggestions-heading" id="resultados"><div><div class="eyebrow"><span></span> CAMINHOS PARA INVESTIGAR</div><h2>Oportunidades sugeridas<span class="title-dot">.</span></h2><p>Clique em Executar análise para calcular os resultados de uma oportunidade. Revise o mapeamento e os pressupostos antes de tomar decisões.</p></div><span class="count-pill" id="suggestion-count"></span></div>
+          <div id="warning" class="notice" hidden></div>
+          <section class="data-findings" id="data-findings" hidden aria-labelledby="data-findings-title"><div class="section-title"><div><div class="eyebrow"><span></span> QUALIDADE E ESTRUTURA</div><h2 id="data-findings-title">Sinais para revisar<span class="title-dot">.</span></h2><p id="quality-note"></p></div></div><div id="quality-findings" class="quality-findings"></div><details class="detector-details"><summary>Como o SigmaFlow classificou estes dados</summary><div id="detector-findings"></div><p class="analysis-note">A classificação é heurística. Confirme a variável resposta, o contexto e os pré-requisitos antes de executar métodos ou interpretar resultados.</p></details></section>
+          <div id="suggestions" class="suggestions"></div>
+          <details class="data-preview execution-history" id="execution-history-panel" hidden><summary>Histórico imutável de execuções <span id="execution-history-count">0 execuções</span></summary><p class="summary-caption">Cada registro preserva resultado, planilha, parâmetros e identificação do motor. Reexecutar uma análise cria um novo registro.</p><div id="execution-history-list"></div><div id="execution-history-view"></div></details>
+          <section class="case-workspace" id="case-workspace" hidden aria-labelledby="case-workspace-title">
+            <div class="case-workspace-heading"><div><div class="eyebrow"><span></span> PROJETO DMAIC</div><h2 id="case-workspace-title">Transforme a análise em melhoria<span class="title-dot">.</span></h2><p>Registre contexto, causas potenciais, decisões e como sustentar o resultado.</p></div></div>
+            <div class="case-savebar">
+              <label for="project-title">NOME DO PROJETO<input id="project-title" maxlength="160" value="Projeto de melhoria"></label>
+              <button type="button" class="primary-button" id="save-project">Salvar projeto neste computador</button>
+              <button type="button" class="outline-button" id="export-project" aria-describedby="export-status">Baixar pacote do projeto</button>
+              <button type="button" class="text-button" id="show-save-copy">Salvar como novo projeto</button>
+              <span id="save-status" role="status" aria-live="polite">Ainda não salvo</span>
+              <span id="export-status" role="status" aria-live="polite" aria-atomic="true"></span>
+            </div>
+            <div id="workspace-concurrency" class="workspace-concurrency" hidden>
+              <strong>Salvamento automático suspenso</strong><p id="workspace-conflict-message" role="status" aria-live="polite"></p>
+              <div class="history-buttons"><button type="button" class="outline-button" id="reload-current-project">Reabrir versão atual salva</button><button type="button" class="outline-button" id="conflict-save-copy">Preservar edição em novo projeto</button></div>
+            </div>
+            <form id="workspace-copy-panel" class="history-recovery" hidden>
+              <h3>Salvar a edição em um novo projeto</h3><p>O novo projeto receberá a planilha, as análises e as anotações em edição. Informe um nome diferente para identificá-lo; o projeto de origem será preservado.</p>
+              <label>Nome do novo projeto<input id="workspace-copy-title" maxlength="160" required></label>
+              <p id="workspace-copy-status" role="status" aria-live="polite"></p>
+              <div class="history-buttons"><button type="submit" class="primary-button" id="save-project-copy">Salvar novo projeto</button><button type="button" class="text-button" id="cancel-save-copy">Cancelar</button></div>
+            </form>
+            <div class="local-retention">O projeto salvo inclui a planilha enviada e ficará em <code>output/projetos_locais</code> neste computador. O pacote reúne os dados, resultados salvos, relatório e registros de rastreabilidade para consulta fora do aplicativo. Use “Excluir” na lista para remover o projeto local.</div>
+            <div class="dmaic-tabs" role="tablist" aria-label="Fases DMAIC">
+              <button type="button" role="tab" data-phase="definir" aria-selected="true">Definir <small></small></button>
+              <button type="button" role="tab" data-phase="medir" aria-selected="false">Medir <small></small></button>
+              <button type="button" role="tab" data-phase="analisar" aria-selected="false">Analisar <small></small></button>
+              <button type="button" role="tab" data-phase="implementar" aria-selected="false">Implementar <small></small></button>
+              <button type="button" role="tab" data-phase="controlar" aria-selected="false">Controlar <small></small></button>
+            </div>
+            <div class="phase-callout" id="phase-guidance" role="status"></div>
+            <section class="phase-panel" id="phase-definir" role="tabpanel">
+              <h3>Contrato do projeto</h3><p class="phase-description">Defina o problema, a métrica e a meta. Sugestões do sistema não substituem o acordo com patrocinador e dono do processo.</p>
+              <div class="form-grid">
+                <label>Problema observado<textarea id="charter-problem" rows="3" placeholder="O que ocorre, onde e desde quando? Inclua a dimensão observada."></textarea></label>
+                <label>Indicador principal (Y)<input id="charter-y" placeholder="Ex.: taxa de refugo"></label>
+                <label>Definição operacional<input id="charter-definition" placeholder="Como o indicador é contado e em qual unidade?"></label>
+                <label>Unidade do indicador<input id="charter-unit" placeholder="Ex.: %, peças/mês, minutos"></label>
+                <label>Linha de base<input id="charter-baseline" inputmode="decimal" placeholder="Valor e período"></label>
+                <label>Meta e prazo<input id="charter-target" placeholder="Valor-alvo e data"></label>
+                <label>Responsável pelo projeto<input id="charter-owner" placeholder="Nome ou função"></label>
+                <label>Patrocinador / dono do processo<input id="charter-sponsor" placeholder="Nome ou função"></label>
+              </div>
+            </section>
+            <section class="phase-panel" id="phase-medir" role="tabpanel" hidden>
+              <h3>Plano de medição e linha de base</h3><p class="phase-description">Revise o desenho dos dados antes de usar índices ou comparar grupos. A estabilidade e a qualidade da medição são decisões do analista, não inferidas apenas por nome de coluna.</p>
+              <div class="form-grid">
+                <label>Como os dados foram coletados?<textarea id="measure-source" rows="3" placeholder="Fonte, período, amostragem, subgrupos e condições de coleta"></textarea></label>
+                <label>Unidade experimental / denominador<input id="measure-unit" placeholder="O que cada linha representa? Qual é a exposição?"></label>
+                <label>Estudo do sistema de medição<select id="measure-msa"><option value="pendente">Ainda não avaliado</option><option value="adequado">Revisado e adequado para esta decisão</option><option value="inadequado">Problema identificado</option><option value="nao_aplicavel">Não aplicável, com justificativa no plano</option></select></label>
+                <label>Observações e limitações<textarea id="measure-notes" rows="3" placeholder="Dados ausentes, mudanças de processo, instrumentos, exclusões"></textarea></label>
+              </div>
+              <div class="phase-check" id="measure-check"></div>
+            </section>
+            <section class="phase-panel" id="phase-analisar" role="tabpanel" hidden>
+              <h3>Investigação de causas potenciais</h3><p class="phase-description">O Ishikawa organiza hipóteses. Pontuação ajuda a ordenar a investigação, mas não prova relação causal. Registre evidência e mantenha estados de validação explícitos.</p>
+              <div class="fishbone-entry">
+                <label>Categoria<select id="cause-category"><option>Método</option><option>Mão de obra / pessoas</option><option>Máquina</option><option>Material</option><option>Medição</option><option>Meio ambiente</option><option>Outra</option></select></label>
+                <label class="cause-text-label">Causa potencial<input id="cause-text" maxlength="300" placeholder="Uma condição verificável do processo"></label>
+                <button type="button" class="outline-button" id="add-cause">Adicionar hipótese</button>
+              </div>
+              <div class="qualitative-note">Prioridade de investigação = impacto (1–5) × frequência percebida (1–5). É uma avaliação estruturada da equipe, não correlação nem confirmação de causa.</div>
+              <div id="cause-list" class="cause-list"><p class="empty-state">Nenhuma causa potencial registrada.</p></div>
+              <div class="phase-check" id="analyze-check"></div>
+              <h4 class="subsection-title">Forças e barreiras para a mudança</h4>
+              <div class="force-entry"><select id="force-type" aria-label="Tipo de força"><option value="apoio">Força de apoio</option><option value="barreira">Barreira</option></select><input id="force-text" maxlength="240" placeholder="Fator que ajuda ou dificulta a mudança"><select id="force-impact" aria-label="Impacto percebido"><option value="1">Impacto 1</option><option value="2">Impacto 2</option><option value="3" selected>Impacto 3</option><option value="4">Impacto 4</option><option value="5">Impacto 5</option></select><button type="button" class="outline-button" id="add-force">Registrar</button></div>
+              <div id="force-list" class="force-list"></div>
+            </section>
+            <section class="phase-panel" id="phase-implementar" role="tabpanel" hidden>
+              <h3>Plano de ação</h3><p class="phase-description">Conecte ações às causas selecionadas, indique responsáveis e defina como verificar implantação e eficácia separadamente.</p>
+              <div class="action-entry">
+                <label>Ação<textarea id="action-text" rows="2" placeholder="O que será alterado no processo?"></textarea></label>
+                <label>Causa relacionada<select id="action-cause"><option value="">Selecione uma causa</option></select></label>
+                <label>Responsável<input id="action-owner" placeholder="Pessoa ou função"></label>
+                <label>Prazo<input id="action-due" type="date"></label>
+                <label>Critério de verificação<textarea id="action-check" rows="2" placeholder="Como confirmar implantação e depois eficácia?"></textarea></label>
+                <label>Impacto esperado (1–5)<select id="action-impact"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>
+                <label>Esforço estimado (1–5)<select id="action-effort"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></label>
+                <button type="button" class="outline-button" id="add-action">Adicionar ação</button>
+              </div>
+              <div class="qualitative-note">Impacto/esforço é uma heurística de seleção de alternativas. A decisão deve considerar segurança, qualidade, custo, riscos e aprovação do dono do processo.</div>
+              <div id="action-list" class="action-list"><p class="empty-state">Nenhuma ação registrada.</p></div>
+              <section id="pilot-section" class="pilot-section" aria-labelledby="pilot-title" tabindex="-1">
+                <h4 id="pilot-title">Verificar piloto: antes e depois</h4>
+                <p class="phase-description">Compare o indicador observado em duas janelas de tempo e verifique a meta declarada. Registre o plano antes de interpretar o resultado e relacione uma ação, quando houver.</p>
+                <p class="qualitative-note">Este método compara amostras independentes. Dados pareados, medições repetidas da mesma unidade, dependência temporal e amostras agrupadas por lote ou máquina precisam de outro desenho. A comparação antes/depois não demonstra que a ação causou a mudança. Confirmar as declarações abaixo registra sua avaliação; não comprova essas condições.</p>
+                <form id="pilot-form">
+                  <div class="form-grid">
+                    <label>Tipo de indicador<select id="pilot-kind" data-pilot-field="kind" required><option value="continuous">Média de uma medida contínua</option><option value="proportion">Proporção de unidades rejeitadas (%)</option></select></label>
+                    <label>Ação relacionada<select id="pilot-action" data-pilot-field="action_id"><option value="">Sem ação relacionada · exploração</option></select></label>
+                    <label>Indicador<input id="pilot-indicator" data-pilot-field="indicator" required maxlength="160" placeholder="Ex.: peso de enchimento ou taxa de refugo"></label>
+                    <label>Unidade<input id="pilot-unit" data-pilot-field="unit" required maxlength="40" placeholder="Ex.: g, min ou %"></label>
+                    <label class="pilot-wide">Definição operacional<textarea id="pilot-definition" data-pilot-field="definition" rows="2" required maxlength="1200" placeholder="O que é medido ou rejeitado? O que cada observação e denominador representam?"></textarea></label>
+                    <label>Melhoria desejada<select id="pilot-direction" data-pilot-field="direction" required><option value="decrease">Reduzir o indicador</option><option value="increase">Aumentar o indicador</option></select></label>
+                    <label>Meta do indicador após o piloto<input id="pilot-target" data-pilot-field="target" type="number" step="any" required placeholder="Valor-alvo na unidade informada"></label>
+                    <label>Antes · início (inclusive)<input id="pilot-before-start" data-pilot-field="before_start" type="date" required></label>
+                    <label>Antes · fim (inclusive)<input id="pilot-before-end" data-pilot-field="before_end" type="date" required></label>
+                    <label>Depois · início (inclusive)<input id="pilot-after-start" data-pilot-field="after_start" type="date" required></label>
+                    <label>Depois · fim (inclusive)<input id="pilot-after-end" data-pilot-field="after_end" type="date" required></label>
+                    <label class="pilot-wide">Comparabilidade e outras mudanças<textarea id="pilot-comparability-notes" data-pilot-field="comparability_notes" rows="3" required maxlength="2000" placeholder="Registre diferenças de mix, medição, amostragem, volumes, sazonalidade, outras ações e limitações. Como as janelas permanecem comparáveis?"></textarea></label>
+                  </div>
+                  <div id="pilot-mapping" class="pilot-mapping" role="status" aria-live="polite"></div>
+                  <label class="pilot-confirmation"><input id="pilot-independence" data-pilot-field="independence_confirmed" type="checkbox" required><span>Avaliei o desenho e declaro observações/unidades independentes; não há pareamento, repetição da mesma unidade, dependência serial ou agrupamento que exija outro método.</span></label>
+                  <label class="pilot-confirmation"><input id="pilot-comparability" data-pilot-field="comparability_confirmed" type="checkbox" required><span>Revisei a definição, a unidade, o sistema de medição, a população e os períodos; registrei diferenças e considero as janelas comparáveis para esta análise.</span></label>
+                  <p id="pilot-status" class="analysis-note" role="status" aria-live="polite"></p>
+                  <button type="submit" id="pilot-run" class="primary-button">Calcular comparação do piloto</button>
+                </form>
+                <p id="pilot-result-notice" class="pilot-result-notice" role="status" aria-live="polite" hidden></p>
+                <div id="pilot-output" class="analysis-output pilot-output" hidden></div>
+              </section>
+              <div class="phase-check" id="improve-check"></div>
+            </section>
+            <section class="phase-panel" id="phase-controlar" role="tabpanel" hidden>
+              <h3>Plano de controle e sustentação</h3><p class="phase-description">Registre como acompanhar o resultado e o que fazer diante de um sinal. Limites de controle, especificações e metas gerenciais têm papéis diferentes.</p>
+              <div class="form-grid">
+                <label>Indicador a acompanhar<input id="control-metric" placeholder="Y principal ou medida de proteção"></label>
+                <label>Responsável pelo acompanhamento<input id="control-owner" placeholder="Dono do processo ou função"></label>
+                <label>Frequência e fonte<input id="control-frequency" placeholder="Ex.: por turno; sistema de produção"></label>
+                <label>Regra de reação<textarea id="control-reaction" rows="3" placeholder="Quem verifica, investiga e toma qual ação diante de desvio/sinal?"></textarea></label>
+                <label>Documento / evidência de padronização<textarea id="control-standard" rows="3" placeholder="Procedimento, treinamento, revisão e local do registro"></textarea></label>
+              </div>
+              <div class="phase-check" id="control-check"></div>
+            </section>
+          </section>
+          <div class="disclaimer"><span>✳</span><p><strong>Resultados para apoiar sua decisão</strong><br>As análises apresentam seus métodos e limitações. Associações e diferenças observadas não comprovam causas; revise os resultados com o responsável pelo processo.</p></div>
+        </section>
+        <footer><span>© SigmaFlow · melhoria contínua orientada por dados</span><span>FEITO PARA QUEM TRANSFORMA PROCESSOS</span></footer>
+      </section>
+    </main>
+  </div>
+  <section id="inline-report" class="inline-report" hidden aria-label="Relatório das análises">
+    <div class="inline-report-nav"><button type="button" id="back-to-diagnosis">← Voltar ao diagnóstico</button><span id="inline-report-label">Relatório das análises</span></div>
+    <iframe id="report-frame" title="Relatório das análises" loading="lazy"></iframe>
+  </section>
+</body>
+</html>

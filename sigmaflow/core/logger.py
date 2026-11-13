@@ -82,8 +82,14 @@ def setup_logging(
     root = logging.getLogger("sigmaflow")
     root.setLevel(logging.DEBUG)  # Capture everything; handlers filter
 
-    # Remove existing handlers to avoid duplicate messages on re-init
-    root.handlers.clear()
+    # Close old handlers before replacing them. FileHandler streams keep files
+    # locked on Windows even after being removed from the logger.
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
+        try:
+            handler.flush()
+        finally:
+            handler.close()
 
     # ── Console handler ───────────────────────────────────────────────────────
     if not quiet:

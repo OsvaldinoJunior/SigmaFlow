@@ -254,11 +254,12 @@ class ProblemDetector:
         # ── Rule: ANOVA ───────────────────────────────────────────────────────
         if n_cat >= 1 and n_num >= 1 and n_rows >= self.min_rows_anova:
             reasons = [
-                f"{n_cat} categorical + {n_num} numeric column(s) — group comparison viable",
+                f"{n_cat} categorical + {n_num} numeric column(s) — exploratory group comparison may be relevant",
                 f"{n_rows} observations (>= {self.min_rows_anova})",
+                "Column types alone do not confirm response/factor roles, independent observations, or a suitable comparison design",
             ]
             problems["anova"]   = reasons
-            confidence["anova"] = round(min(0.4 + n_cat * 0.1 + n_num * 0.05, 1.0), 2)
+            confidence["anova"] = 0.3
 
         # ── Rule: Pareto ──────────────────────────────────────────────────────
         has_count = any(kw in c for c in col_set for kw in _COUNT_KEYWORDS)
@@ -273,11 +274,14 @@ class ProblemDetector:
         # ── Rule: DOE ────────────────────────────────────────────────────────
         if n_cat >= 1 and n_num >= 1 and n_rows >= 4:
             reasons = [
-                f"{n_cat} categorical factor(s) + {n_num} numeric response(s)",
-                "Factorial experimental structure possible",
+                f"{n_cat} categorical column(s) + {n_num} numeric column(s) — exploratory comparison between observed levels may be relevant",
+                "The spreadsheet schema does not establish an experimental design, randomization, replication, blocking, or safe operating limits; formal DOE is not confirmed",
             ]
             problems["doe"]   = reasons
-            confidence["doe"] = round(min(0.3 + n_cat * 0.15, 0.85), 2)
+            # This score describes only a weak schema-level candidate signal.
+            # It must not grow with the number of categorical columns or be
+            # interpreted as confidence that a designed experiment exists.
+            confidence["doe"] = 0.3
 
         # ── Fallback ──────────────────────────────────────────────────────────
         if not problems:
