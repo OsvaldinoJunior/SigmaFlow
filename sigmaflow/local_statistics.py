@@ -19,6 +19,17 @@ def wilson_interval(successes: int, trials: int, confidence: float = 0.95):
     return max(0.0, center-half), min(1.0, center+half)
 
 
+def newcombe_difference(successes_a: int, trials_a: int, successes_b: int, trials_b: int):
+    """Independent proportions B - A, Newcombe-Wilson 95%, no continuity correction."""
+    lower_a, upper_a = wilson_interval(successes_a, trials_a)
+    lower_b, upper_b = wilson_interval(successes_b, trials_b)
+    a, b = successes_a / trials_a, successes_b / trials_b
+    difference = b - a
+    lower = difference - math.hypot(b - lower_b, upper_a - a)
+    upper = difference + math.hypot(upper_b - b, a - lower_a)
+    return difference, (max(-1.0, lower), min(1.0, upper))
+
+
 def crossed_grr(data: pd.DataFrame, multiplier: float = 5.15):
     """ANOVA cruzada balanceada com interação peça × operador, sem pooling."""
     parts = data["peca"].nunique()

@@ -46,11 +46,11 @@ def _normalize(value: str) -> str:
 # A correspondência usa nomes completos normalizados; não usa substrings.
 ROLES = {
     "data": ("Data ou sequência", ["data", "data de producao", "data da medicao", "data de medicao", "data da coleta", "data da falha", "data do registro", "date", "timestamp", "datetime", "horario", "sequencia", "amostra"]),
-    "categoria": ("Tipo de defeito ou causa", ["tipo defeito", "tipo de defeito", "defeito", "defect type", "failure mode", "modo de falha", "modo da falha", "motivo parada", "motivo de parada", "causa parada"]),
-    "defeitos": ("Quantidade rejeitada", ["rejeitados", "rejeitadas", "quantidade rejeitada", "quantidade rejeitados", "refugo", "pecas rejeitadas", "defect count", "rejects", "scrap"]),
+    "categoria": ("Tipo de defeito ou causa", ["tipo defeito", "tipo de defeito", "categoria do defeito", "tipo refugo", "motivo rejeicao", "motivo de rejeicao", "scrap reason", "defeito", "defect type", "failure mode", "modo de falha", "modo da falha", "motivo parada", "motivo de parada", "causa parada"]),
+    "defeitos": ("Quantidade rejeitada", ["rejeitados", "rejeitadas", "quantidade rejeitada", "quantidade rejeitados", "unidades rejeitadas", "unidades refugadas", "pecas refugadas", "quantidade de refugos", "qtd rejeitada", "refugo", "pecas rejeitadas", "unidades defeituosas", "itens nao conformes", "defect count", "defective units", "nonconforming units", "rejects", "scrap"]),
     "total": ("Quantidade produzida ou inspecionada", ["produzido", "produzida", "producao", "quantidade produzida", "pecas produzidas", "unidades produzidas", "inspecionado", "inspecionadas", "unidades inspecionadas", "total produzido", "total inspecionado", "produced", "sample size"]),
     "medida": ("Medição do processo", ["medicao", "medida", "resultado da medicao", "medicao do processo", "measurement", "valor", "value", "peso", "peso g", "espessura", "espessura mm", "diametro", "diametro mm", "comprimento"]),
-    "grupo": ("Máquina, turno ou grupo", ["maquina", "linha", "turno", "fornecedor", "produto", "grupo", "etapa", "etapa do processo", "machine", "shift", "supplier", "line"]),
+    "grupo": ("Máquina, turno ou grupo", ["maquina", "equipamento", "linha", "linha de producao", "turno", "fornecedor", "produto", "grupo", "etapa", "etapa do processo", "machine", "equipment", "shift", "supplier", "line"]),
     "lsl": ("Limite inferior de especificação", ["lsl", "lie", "limite inferior", "lower spec"]),
     "usl": ("Limite superior de especificação", ["usl", "lse", "limite superior", "upper spec"]),
     "peca": ("Peça ou amostra para MSA", ["peca", "numero da peca", "identificacao da peca", "parte", "part", "part id", "peca id"]),
@@ -69,8 +69,8 @@ ROLES = {
     "tempo_falha": ("Tempo até falha ou fim do acompanhamento", ["tempo ate falha", "tempo ate falha horas", "time to failure", "tempo observado", "tempo observado horas", "tempo acompanhamento", "tempo de acompanhamento", "follow up time", "observed time"]),
     "evento": ("Evento: falha = 1; censura à direita = 0", ["evento", "evento observado", "falha observada", "event observed", "failure observed"]),
     "custo": ("Custo da perda (legado)", ["custo", "cost", "custo refugo"]),
-    "custo_unitario": ("Custo por unidade rejeitada", ["custo unitario", "custo por unidade", "valor por unidade", "unit cost", "unit price"]),
-    "custo_total": ("Custo total da perda por registro", ["custo total", "custo total refugo", "valor total perdido", "total scrap cost", "total loss cost"]),
+    "custo_unitario": ("Custo por unidade rejeitada", ["custo unitario", "custo unitario r", "custo por unidade", "custo por unidade rejeitada", "unit cost", "cost per rejected unit"]),
+    "custo_total": ("Custo total da perda por registro", ["custo total", "custo total r", "custo total refugo", "valor total perdido", "total scrap cost", "total loss cost"]),
 }
 
 
@@ -178,15 +178,82 @@ def diagnose(df: pd.DataFrame, mapping: dict[str, str] | None = None, objective:
     suggestions = []
     objective_text = _normalize(objective)
     for key, title, question, alternatives, methods, caveat in CATALOG:
-        best = min(alternatives, key=lambda group: sum(not selected.get(role) for role in group))
-        present = [role for role in best if selected.get(role)]
-        missing = [role for role in best if not selected.get(role)]
+        comparison_options = None
+        if key == "grupos":
+            option_specs = [
+                ("measurement", "Medições entre grupos", alternatives[0]),
+                ("proportion", "Taxa de unidades rejeitadas (%)", alternatives[1]),
+            ]
+            comparison_options = []
+            for value, label, required_roles in option_specs:
+                missing_roles = [role for role in required_roles if not selected.get(role)]
+                comparison_options.append({
+                    "value": value,
+                    "label": label,
+                    "available": not missing_roles,
+                    "missing": [ROLES[role][0] for role in missing_roles],
+                })
+            available_options = [option for option in comparison_options if option["available"]]
+            # Do not choose a route from column order when both data structures exist.
+            # `found` reports the mapped inputs for every available route.
+            if available_options:
+                best = list(dict.fromkeys(role for option in option_specs
+                                          if any(candidate["value"] == option[0] and candidate["available"]
+                                                 for candidate in comparison_options)
+                                          for role in option[2]))
+                present = [role for role in best if selected.get(role)]
+                missing = []
+            else:
+                best = min(alternatives, key=lambda group: sum(not selected.get(role) for role in group))
+                present = [role for role in best if selected.get(role)]
+                missing = [ROLES[role][0] for role in best if not selected.get(role)]
+            suggested_methods = [
+                "Medições: comparação exploratória entre grupos",
+                "Proporção: intervalo de Wilson por grupo",
+                "Proporções: teste global; Newcombe para comparação entre dois grupos",
+            ]
+            caveat = (
+                "Escolha explicitamente medições ou taxa de unidades rejeitadas. Para proporções, confirme que cada unidade "
+                "é contada uma única vez como defeituosa, que o denominador representa as unidades inspecionadas no mesmo "
+                "grupo e que os denominadores são disjuntos entre grupos. O método de Newcombe aplica-se à comparação de "
+                "dois grupos; intervalos por grupo usam Wilson. Diferenças observadas não demonstram causalidade e podem "
+                "refletir produto, período ou outras condições."
+            )
+        else:
+            best = min(alternatives, key=lambda group: sum(not selected.get(role) for role in group))
+            present = [role for role in best if selected.get(role)]
+            missing = [role for role in best if not selected.get(role)]
+        optional_found = []
+        blockers = []
+        if key != "grupos":
+            suggested_methods = methods
+        if key == "refugo":
+            optional_roles = ["grupo", "custo_unitario", "custo_total", "custo"]
+            optional_found = [{"role": ROLES[r][0], "column": selected[r]} for r in optional_roles if selected.get(r)]
+            cost_roles = [r for r in ("custo_unitario", "custo_total") if selected.get(r)]
+            if selected.get("custo"):
+                blockers.append("A coluna legado 'custo' nao informa se e custo unitario ou custo total por registro. Mapeie uma coluna com definicao explicita.")
+            if len(cost_roles) > 1:
+                blockers.append("Duas bases de custo foram mapeadas. Deixe apenas custo unitário ou custo total por registro.")
+                cost_method = "Pareto por custo: escolha uma única base de custo"
+            elif cost_roles:
+                cost_method = "Pareto por custo (" + ROLES[cost_roles[0]][0].lower() + ")"
+            elif selected.get("custo"):
+                cost_method = "Pareto por custo: defina uma coluna de custo"
+            else:
+                cost_method = "Pareto por custo (mapeie custo opcional)"
+            group_method = "Estratificação por " + str(selected["grupo"]) if selected.get("grupo") else "Estratificação (mapeie linha/turno opcional)"
+            suggested_methods = ["Pareto por contagem", cost_method, group_method]
         goal_match = any(word in objective_text.split() for word in _normalize(title).split() if len(word) > 4)
         suggestions.append({"id": key, "title": title, "question": question,
-                            "methods": methods, "caveat": caveat,
-                            "status": "revisar" if not missing else "faltam dados",
+                            "methods": suggested_methods, "caveat": caveat,
+                            "status": "revisar" if (any(option["available"] for option in comparison_options)
+                                                     if comparison_options is not None else not missing)
+                            else "faltam dados",
                             "found": [{"role": ROLES[r][0], "column": selected[r]} for r in present],
-                            "missing": [ROLES[r][0] for r in missing],
+                            "optional_found": optional_found, "blockers": blockers,
+                            "missing": [ROLES[r][0] for r in missing] if comparison_options is None else missing,
+                            **({"comparison_options": comparison_options} if comparison_options is not None else {}),
                             "_score": len(present) / len(best) + (0.15 if goal_match else 0)})
     suggestions.sort(key=lambda item: (-item["_score"], item["title"]))
     for item in suggestions:

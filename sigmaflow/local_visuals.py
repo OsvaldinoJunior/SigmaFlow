@@ -14,6 +14,12 @@ def _bars(title, axis, rows, label_index, value_index, limit=10):
             "mostrados": len(items), "total": len(rows)}
 
 
+def _pareto(title, axis, rows, limit=10):
+    items = [{"label": str(row[0]), "value": row[1], "cumulative": row[3]} for row in rows[:limit]]
+    return {"tipo": "pareto", "titulo": title, "eixo": axis, "itens": items,
+            "mostrados": len(items), "total": len(rows)}
+
+
 def _lines(title, axis, rows, series, limit=100):
     shown = rows[:limit]
     return {"tipo": "linhas", "titulo": title, "eixo": axis,
@@ -43,7 +49,7 @@ def present(scenario, result):
         total_label = next(label for label, _ in result["indicadores"] if str(label).startswith("Total de "))
         total = metrics[total_label]
         pct = value / total * 100
-        chart = _bars("Pareto por quantidade", "Unidades ou ocorrencias, conforme escolha do analista", rows, 0, 1)
+        chart = _pareto("Pareto por contagem", "Contagem absoluta; linha = percentual acumulado", rows)
         insight = f"A maior contagem foi {_fmt(value)} para {name}, equivalente a {_fmt(pct)}% de {total_label.lower()}."
         next_step = "Investigue a categoria e valide as causas com evidencias. A concentracao observada, sozinha, nao prova qual processo ou condicao gera a perda."
         output = {"grafico": chart, "insight": insight, "proximo_passo": next_step}
@@ -51,7 +57,10 @@ def present(scenario, result):
             cost_name, cost_value = _leader(result["linhas_custo"], 1)
             cost_total = result.get("custo_total", 0)
             cost_pct = cost_value / cost_total * 100 if cost_total else None
-            output["grafico_custo"] = _bars("Pareto por custo registrado", "Unidade monetaria informada", result["linhas_custo"], 0, 1)
+            if cost_total > 0:
+                output["grafico_custo"] = _pareto("Pareto por custo registrado", "Valor monetário informado; linha = percentual acumulado", result["linhas_custo"])
+            else:
+                output["insight"] += " Os custos informados somam zero; participação e acumulado por custo não foram calculados."
             share = f" ({_fmt(cost_pct)}% do custo registrado)" if cost_pct is not None else " (total de custo igual a zero; participacao nao calculada)"
             output["insight"] += f" O maior custo foi para {cost_name}: {_fmt(cost_value)}{share}."
             output["proximo_passo"] += " Compare o Pareto de quantidade com o de custo antes de priorizar; custos indiretos, retrabalho e impacto ao cliente podem nao estar incluidos."
@@ -83,6 +92,24 @@ def present(scenario, result):
         return {"grafico": _bars("Medições e especificação", "Quantidade de medições", bars, 0, 1),
                 "insight": f"Das {_fmt(total)} medições, {_fmt(outside)} ficaram fora dos limites informados ({_fmt(metrics['Fora da especificação (%)'])}%).",
                 "proximo_passo": "Confirme os limites, a confiabilidade da medição e a estabilidade antes de usar os índices preliminares para decisões de capacidade."}
+
+    if scenario == "grupos" and result.get("group_comparison", {}).get("kind") == "proportion":
+        comparison = result["group_comparison"]
+        summaries = comparison["groups"]
+        name, value = _leader([[item["label"], item["rate"]] for item in summaries], 1)
+        insight = f"A maior taxa observada foi {_fmt(value)}% em {name}. As taxas dividem as unidades rejeitadas pelas unidades inspecionadas de cada grupo."
+        contrast = comparison.get("difference")
+        if contrast:
+            low, high = contrast["ci95_pp"]
+            insight += f" A diferença {contrast['group_b']} − {contrast['group_a']} foi {_fmt(contrast['estimate_pp'])} pontos percentuais, com IC95% de {_fmt(low)} a {_fmt(high)} p.p."
+        items = [{"label": item["label"], "value": item["rate"], "lower": item["ci95"][0], "upper": item["ci95"][1]} for item in summaries[:20]]
+        return {"grafico": {"tipo": "intervalos", "titulo": "Taxa por grupo e IC95% Wilson", "eixo": "Unidades rejeitadas / inspecionadas (%)",
+                            "itens": items, "mostrados": len(items), "total": len(summaries),
+                            "interval_label": "Ponto: taxa observada · segmento: IC95% Wilson por grupo",
+                            "interval_note": "Os intervalos individuais não são simultâneos. Para dois grupos, consulte o IC da diferença de taxas; a sobreposição dos ICs individuais não substitui essa comparação.",
+                            "nota": "Os denominadores de cada grupo estão na tabela. Tamanhos diferentes de amostra afetam a incerteza."},
+                "insight": insight,
+                "proximo_passo": "Compare o tamanho e o contexto de cada grupo. Revise mix de produtos, períodos, medição e independência; taxas diferentes orientam investigação e não identificam a causa automaticamente."}
 
     if scenario in {"grupos", "fluxo", "doe"}:
         index = 3 if "Taxa (%)" in result["colunas"] else 2

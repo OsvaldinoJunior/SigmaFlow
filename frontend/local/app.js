@@ -3,6 +3,8 @@ let currentFile = null;
 let currentResult = null;
 let mappingDirty = false;
 let currentAnalyses = {};
+let currentSuggestions = new Map();
+const analysesInFlight = new Set();
 let executionHistory = [];
 let pendingExecutions = [];
 let analysisVersion = 0;
@@ -34,7 +36,7 @@ let pilotRenderedResult = null;
 let projectState = emptyProjectState();
 
 function emptyProjectState() {
-  return {charter:{}, measure:{}, causes:[], forces:[], actions:[], control:{}, decisions:{}, pilot:emptyPilotPlan()};
+  return {charter:{}, measure:{}, causes:[], forces:[], actions:[], control:{}, decisions:{}, gateReviews:{}, pilot:emptyPilotPlan()};
 }
 
 function emptyPilotPlan() {
@@ -312,6 +314,7 @@ async function runDiagnosis(useMapping, savedProject = null) {
         actions:Array.isArray(savedProject.actions) ? savedProject.actions : [],
         control:savedProject.control || {},
         decisions:savedProject.investigation?.decisions || {},
+        gateReviews:savedProject.investigation?.gate_reviews || {},
       };
       currentAnalyses = savedProject.analyses && typeof savedProject.analyses === 'object' ? savedProject.analyses : {};
       executionHistory = Array.isArray(savedProject.execution_history) ? savedProject.execution_history : [];
@@ -338,7 +341,7 @@ $('show-opportunities').addEventListener('click', () => { setStep(3); goTo($('re
 $('report-link').addEventListener('click', openReport);
 
 function analysisMarkup(result) {
-  const fmt = (value) => typeof value === 'number' ? value.toLocaleString('pt-BR', {maximumFractionDigits:5}) : String(value ?? '');
+  const fmt = (value) => typeof value === 'number' ? value.toLocaleString('pt-BR', {maximumFractionDigits:5}) : value == null ? 'Não calculado' : String(value);
   return `<h4>${escapeHtml(result.titulo)}</h4><p class="analysis-method">${escapeHtml(result.metodo)}</p><div class="analysis-metrics">${result.indicadores.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(fmt(value))}</strong></div>`).join('')}</div>${renderChart(result.grafico)}${result.grafico_np ? renderChart(result.grafico_np) : ''}${result.grafico_custo ? renderChart(result.grafico_custo) : ''}<div class="result-insight"><strong>O que os dados mostram</strong><p>${escapeHtml(result.insight)}</p>${result.evidencias?.length ? `<strong>Evidências dos cálculos</strong><ul>${result.evidencias.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}<strong>Como isso pode ajudar</strong><p>${escapeHtml(result.proximo_passo)}</p></div><details class="result-details"><summary>Ver tabela e cuidados da análise</summary><div class="table-wrap"><table><thead><tr>${result.colunas.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>${result.linhas.map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(fmt(value))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${result.linhas_total > result.linhas.length ? `<p class="analysis-note">Exibidas ${result.linhas.length} de ${result.linhas_total} linhas.</p>` : ''}${result.linhas_np?.length ? `<h4>Carta np para tamanho fixo</h4><div class="table-wrap"><table><thead><tr>${result.colunas_np.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>${result.linhas_np.map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(fmt(value))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${result.linhas_np_total > result.linhas_np.length ? `<p class="analysis-note">Exibidas ${result.linhas_np.length} de ${result.linhas_np_total} linhas.</p>` : ''}` : ''}${result.linhas_custo?.length ? `<h4>Pareto por custo</h4><div class="table-wrap"><table><thead><tr>${result.colunas_custo.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>${result.linhas_custo.map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(fmt(value))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}${result.linhas_estratificacao?.length ? `<h4>Estratifica\u00e7\u00e3o por ${escapeHtml(currentMapping().grupo || 'grupo')}</h4><div class="table-wrap"><table><thead><tr>${result.colunas_estratificacao.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>${result.linhas_estratificacao.slice(0,100).map((row) => `<tr>${row.map((value) => `<td>${escapeHtml(fmt(value))}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="analysis-note">Exibidas ${Math.min(result.linhas_estratificacao.length,100)} de ${result.estratificacao_total} linhas estratificadas.</p>` : ''}${result.observacoes.map((note) => `<p class="analysis-note">${escapeHtml(note)}</p>`).join('')}</details>${renderAnalysisTraceability(result.rastreabilidade)}<button type="button" class="report-open">Ver relatório das análises →</button>`;
 }
 
@@ -348,22 +351,96 @@ function renderSavedAnalyses(mapping) {
     const card = document.querySelector(`[data-scenario="${CSS.escape(scenario)}"]`);
     if (!card) continue;
     const output = card.querySelector('.analysis-output');
-    const basis = result.rastreabilidade?.parameters?.count_basis || result.parameters?.count_basis;
+    const savedParameters = result.rastreabilidade?.parameters || result.parameters || {};
+    const kindSelect = card.querySelector('[data-analysis-param="comparison_kind"]');
     const basisSelect = card.querySelector('[data-analysis-param="count_basis"]');
-    if (basisSelect && basis) basisSelect.value = basis;
+    const disjointCheck = card.querySelector('[data-analysis-param="denominators_disjoint"]');
+    const legacyGroupWithoutParameters = scenario === 'grupos' && !savedParameters.comparison_kind;
+    card.dataset.legacySnapshotParametersMissing = legacyGroupWithoutParameters ? 'true' : 'false';
+    if (kindSelect && legacyGroupWithoutParameters) kindSelect.value = '';
+    if (kindSelect && !legacyGroupWithoutParameters && savedParameters.comparison_kind) kindSelect.value = savedParameters.comparison_kind;
+    if (basisSelect && !legacyGroupWithoutParameters && savedParameters.count_basis) basisSelect.value = savedParameters.count_basis;
+    if (disjointCheck && !legacyGroupWithoutParameters && savedParameters.denominators_disjoint === true) disjointCheck.checked = true;
+    syncScenarioParameterFields(card);
     output.innerHTML = analysisMarkup(result);
     output.hidden = false;
     card.classList.add('has-result');
     const button = card.querySelector('.run-analysis');
     button.textContent = 'Executar análise novamente ↻';
-    button.disabled = mappingDirty || (['refugo','atributos'].includes(scenario) && !basis);
+    refreshAnalysisEligibility(card);
   }
   renderPilotResult();
   if (Object.keys(currentAnalyses).length) saveReport(mapping);
 }
 
+function analysisParametersForCard(card) {
+  const scenario = card?.dataset.scenario;
+  const value = (name) => card.querySelector(`[data-analysis-param="${name}"]`)?.value || '';
+  const checked = (name) => card.querySelector(`[data-analysis-param="${name}"]`)?.checked === true;
+  if (scenario === 'refugo') {
+    const countBasis = value('count_basis');
+    return ['defective_units', 'defect_occurrences'].includes(countBasis) ? {count_basis:countBasis} : null;
+  }
+  if (scenario === 'atributos') return value('count_basis') === 'defective_units' ? {count_basis:'defective_units'} : null;
+  if (scenario === 'grupos') {
+    const item = currentSuggestions.get(scenario);
+    const kind = value('comparison_kind');
+    const option = item?.comparison_options?.find((candidate) => candidate.value === kind && candidate.available);
+    if (!option || card.dataset.legacySnapshotParametersMissing === 'true') return null;
+    if (kind === 'measurement') return {comparison_kind:'measurement'};
+    if (kind === 'proportion' && value('count_basis') === 'defective_units' && checked('denominators_disjoint')) {
+      return {comparison_kind:'proportion', count_basis:'defective_units', denominators_disjoint:true};
+    }
+    return null;
+  }
+  return {};
+}
+
+function analysisEligibility(card) {
+  const scenario = card?.dataset.scenario;
+  const suggestion = currentSuggestions.get(scenario);
+  const parameters = analysisParametersForCard(card);
+  const eligible = Boolean(currentFile && card?.isConnected && suggestion
+    && suggestion.status === 'revisar'
+    && !(suggestion.blockers || []).length
+    && !mappingDirty
+    && !analysesInFlight.has(scenario)
+    && parameters !== null);
+  return {eligible, parameters, suggestion};
+}
+
+function syncScenarioParameterFields(card) {
+  if (!card) return;
+  const kind = card.querySelector('[data-analysis-param="comparison_kind"]')?.value || '';
+  const proportion = kind === 'proportion';
+  const basisField = card.querySelector('[data-analysis-param="count_basis"]')?.closest('label');
+  const denominatorField = card.querySelector('[data-analysis-param="denominators_disjoint"]')?.closest('label');
+  if (card.dataset.scenario === 'grupos') {
+    if (basisField) basisField.hidden = !proportion;
+    if (denominatorField) denominatorField.hidden = !proportion;
+  }
+  const busy = analysesInFlight.has(card.dataset.scenario);
+  card.querySelectorAll('[data-analysis-param]').forEach((field) => { field.disabled = busy; });
+}
+
+function refreshAnalysisEligibility(card) {
+  if (!card) return;
+  const button = card.querySelector('.run-analysis');
+  if (!button || card.dataset.scenario === 'piloto') return;
+  syncScenarioParameterFields(card);
+  const {eligible, suggestion} = analysisEligibility(card);
+  button.disabled = !eligible;
+  if (analysesInFlight.has(card.dataset.scenario)) button.textContent = 'Calculando...';
+  else if (card.classList.contains('has-result')) button.textContent = 'Executar análise novamente ↻';
+  else if (suggestion?.blockers?.length) button.textContent = 'Revise os bloqueios acima';
+  else if (suggestion?.status !== 'revisar') button.textContent = 'Preencha os dados necessários';
+  else if (!eligible) button.textContent = 'Confirme os parâmetros da análise';
+  else button.textContent = 'Executar análise →';
+}
+
 function render(data) {
   analysisVersion++;
+  currentSuggestions = new Map((data.suggestions || []).map((item) => [item.id, item]));
   clearReport(true);
   mappingDirty = false;
   $('mapping-notice').hidden = true;
@@ -389,16 +466,32 @@ function render(data) {
   const detector = data.legacy_problems || {};
   const detected = detector.problems || [];
   $('detector-findings').innerHTML = detected.length ? `<p><strong>Tipos candidatos:</strong> ${detected.map((item) => escapeHtml(item)).join(' · ')}</p>${Object.entries(detector.rationale || {}).map(([key, reasons]) => `<p><strong>${escapeHtml(key)}</strong> · ${escapeHtml((reasons || []).join('; '))} <span>Pista estrutural (n\u00e3o calibrada)</span></p>`).join('')}` : '<p>Nenhuma classe heurística foi priorizada; explore as sugestões abaixo e confirme o objetivo.</p>';
+function scenarioParameterMarkup(item) {
+  if (['refugo', 'atributos'].includes(item.id)) {
+    return `<label class="analysis-parameter">${item.id === 'atributos' ? 'Confirme a sem\u00e2ntica exigida pela carta p/np:' : 'O que a coluna de contagem representa?'}<select data-analysis-param="count_basis"><option value="">Selecione antes de calcular</option><option value="defective_units">Contagem de unidades defeituosas</option>${item.id === 'refugo' ? '<option value="defect_occurrences">Ocorr\u00eancias de defeitos</option>' : ''}</select></label>`;
+  }
+  if (item.id !== 'grupos') return '';
+  const options = Array.isArray(item.comparison_options) ? item.comparison_options : [];
+  const available = options.filter((option) => option.available);
+  const initial = available.length === 1 ? available[0].value : '';
+  const optionMarkup = options.map((option) => {
+    const unavailableReason = option.missing?.length ? ` — faltam: ${option.missing.join(', ')}` : '';
+    return `<option value="${escapeHtml(option.value)}" ${option.available ? '' : 'disabled'} ${option.value === initial ? 'selected' : ''}>${escapeHtml(option.label)}${escapeHtml(unavailableReason)}</option>`;
+  }).join('');
+  return `<label class="analysis-parameter">Tipo de compara\u00e7\u00e3o<select data-analysis-param="comparison_kind"><option value="" ${initial ? '' : 'selected'}>Selecione o tipo</option>${optionMarkup}</select></label><label class="analysis-parameter" hidden>Confirma\u00e7\u00e3o da contagem para propor\u00e7\u00f5es<select data-analysis-param="count_basis"><option value="">Confirme o significado da contagem</option><option value="defective_units">Unidades defeituosas: cada unidade aparece uma vez</option></select></label><label class="analysis-parameter" hidden><input type="checkbox" data-analysis-param="denominators_disjoint"> Cada linha representa unidades distintas e o total n\u00e3o se repete entre tipos de defeito.</label><p class="analysis-note">A op\u00e7\u00e3o de propor\u00e7\u00e3o s\u00f3 serve quando os grupos t\u00eam denominadores sem sobreposi\u00e7\u00e3o. N\u00e3o repita a produ\u00e7\u00e3o total para cada categoria de defeito.</p>`;
+}
+
 function renderSuggestionCard(item, index) {
   const decision = projectState.decisions?.[item.id] || {};
   const summary = decision.state ? ` · ${escapeHtml(decisionLabel(decision.state))}${decision.confirmed ? '' : ' (motivo pendente)'}` : '';
   const status = !decision.state ? 'A recomendação automática aguarda sua decisão.'
     : decision.confirmed ? `Decisão registrada: ${decisionLabel(decision.state)}.`
     : 'Informe o motivo para registrar esta decisão.';
-  return `<article class="suggestion-card" data-scenario="${escapeHtml(item.id)}"><div class="card-top"><span class="card-index">${String(index + 1).padStart(2,'0')} / CENÁRIO</span><span class="status ${item.status === 'revisar' ? 'ready' : 'incomplete'}">${item.status === 'revisar' ? '●  REVISAR DADOS' : '○  FALTAM DADOS'}</span></div><h3>${escapeHtml(item.title)}</h3><p class="question">${escapeHtml(item.question)}</p><div class="method-list">${item.methods.map((method) => `<span>${escapeHtml(method)}</span>`).join('')}</div><div class="card-detail">${item.found.length ? `<p><strong>Encontrado</strong> ${item.found.map((entry) => `${escapeHtml(entry.role)}: <b>${escapeHtml(entry.column)}</b>`).join(' · ')}</p>` : '<p><strong>Encontrado</strong> Nenhuma coluna associada ainda.</p>'}${item.missing.length ? `<p><strong>Falta informar</strong> ${item.missing.map(escapeHtml).join(' · ')}</p>` : ''}</div><p class="caveat">${escapeHtml(item.caveat)}</p>${['refugo','atributos'].includes(item.id) ? `<label class="analysis-parameter">${item.id === 'atributos' ? 'Confirme a semantica exigida pela carta p/np:' : 'O que a coluna de contagem representa?'}<select data-analysis-param="count_basis"><option value="">Selecione antes de calcular</option><option value="defective_units">Contagem de unidades defeituosas</option>${item.id === 'refugo' ? '<option value="defect_occurrences">Ocorrencias de defeitos</option>' : ''}</select></label>` : ''}<details class="analyst-decision"><summary>Decisão do analista${summary}</summary><label>Como tratar esta oportunidade?<select data-decision-field="state"><option value="" ${!decision.state?'selected':''}>Ainda sem decisão</option><option value="priorizar" ${decision.state==='priorizar'?'selected':''}>Priorizar para investigação</option><option value="adiar" ${decision.state==='adiar'?'selected':''}>Adiar</option><option value="nao_aplicar" ${decision.state==='nao_aplicar'?'selected':''}>Não aplicar</option></select></label><label>Motivo da decisão<textarea data-decision-field="reason" rows="2" placeholder="Obrigatório ao adiar ou não aplicar">${escapeHtml(decision.reason || '')}</textarea></label><p class="decision-status" aria-live="polite">${escapeHtml(status)}</p></details><button type="button" class="run-analysis" ${item.status !== 'revisar' || ['refugo','atributos'].includes(item.id) ? 'disabled' : ''}>${item.status === 'revisar' ? 'Executar análise →' : 'Preencha os dados necessários'}</button><div class="analysis-output" aria-live="polite" hidden></div></article>`;
+  return `<article class="suggestion-card" data-scenario="${escapeHtml(item.id)}"><div class="card-top"><span class="card-index">${String(index + 1).padStart(2,'0')} / CENÁRIO</span><span class="status ${item.status === 'revisar' ? 'ready' : 'incomplete'}">${item.status === 'revisar' ? '●  REVISAR DADOS' : '○  FALTAM DADOS'}</span></div><h3>${escapeHtml(item.title)}</h3><p class="question">${escapeHtml(item.question)}</p><div class="method-list">${item.methods.map((method) => `<span>${escapeHtml(method)}</span>`).join('')}</div><div class="card-detail">${item.found.length ? `<p><strong>Encontrado</strong> ${item.found.map((entry) => `${escapeHtml(entry.role)}: <b>${escapeHtml(entry.column)}</b>`).join(' · ')}</p>` : '<p><strong>Encontrado</strong> Nenhuma coluna associada ainda.</p>'}${item.missing.length ? `<p><strong>Falta informar</strong> ${item.missing.map(escapeHtml).join(' \u00b7 ')}</p>` : ''}${item.optional_found?.length ? `<p><strong>Colunas opcionais reconhecidas</strong> ${item.optional_found.map((entry) => `${escapeHtml(entry.role)}: <b>${escapeHtml(entry.column)}</b>`).join(' \u00b7 ')}</p>` : ''}${item.blockers?.length ? `<p class="analysis-blocker"><strong>Revise o mapeamento</strong> ${item.blockers.map(escapeHtml).join(' ')}</p>` : ''}</div><p class="caveat">${escapeHtml(item.caveat)}</p>${item.id === 'refugo' ? '<p class="analysis-note refugo-guidance">Unidade defeituosa = pe\u00e7a \u00fanica rejeitada; ocorr\u00eancia = cada defeito, que pode se repetir na mesma pe\u00e7a. Custo unit\u00e1rio \u00e9 multiplicado pelas unidades rejeitadas; custo total por registro \u00e9 somado. Use apenas uma base de custo e confirme moeda e per\u00edodo. Grupo habilita estratifica\u00e7\u00e3o; a contagem n\u00e3o ajusta diferen\u00e7as de volume produzido.</p>' : ''}${scenarioParameterMarkup(item)}<details class="analyst-decision"><summary>Decisão do analista${summary}</summary><label>Como tratar esta oportunidade?<select data-decision-field="state"><option value="" ${!decision.state?'selected':''}>Ainda sem decisão</option><option value="priorizar" ${decision.state==='priorizar'?'selected':''}>Priorizar para investigação</option><option value="adiar" ${decision.state==='adiar'?'selected':''}>Adiar</option><option value="nao_aplicar" ${decision.state==='nao_aplicar'?'selected':''}>Não aplicar</option></select></label><label>Motivo da decisão<textarea data-decision-field="reason" rows="2" placeholder="Obrigatório ao adiar ou não aplicar">${escapeHtml(decision.reason || '')}</textarea></label><p class="decision-status" aria-live="polite">${escapeHtml(status)}</p></details><button type="button" class="run-analysis" ${item.status !== 'revisar' || item.blockers?.length || ['refugo','atributos'].includes(item.id) ? 'disabled' : ''}>${item.blockers?.length ? 'Revise o mapeamento de custo' : item.status === 'revisar' ? 'Executar an\u00e1lise \u2192' : 'Preencha os dados necess\u00e1rios'}</button><div class="analysis-output" aria-live="polite" hidden></div></article>`;
 }
 
   $('suggestions').innerHTML = data.suggestions.map(renderSuggestionCard).join('');
+  document.querySelectorAll('#suggestions [data-scenario]').forEach(refreshAnalysisEligibility);
   const pilotButton = document.querySelector('[data-scenario="piloto"] .run-analysis');
   if (pilotButton) { pilotButton.disabled = false; pilotButton.textContent = 'Configurar comparação do piloto →'; }
   $('case-workspace').hidden = false;
@@ -424,7 +517,12 @@ $('suggestions').addEventListener('input', (event) => {
 });
 $('suggestions').addEventListener('change', (event) => {
   if (event.target.dataset.decisionField === 'state') updateOpportunityDecision(event.target.closest('[data-scenario]'));
-  if (event.target.dataset.analysisParam === 'count_basis') event.target.closest('[data-scenario]').querySelector('.run-analysis').disabled = !event.target.value || mappingDirty;
+  if (event.target.dataset.analysisParam) {
+    const card = event.target.closest('[data-scenario]');
+    if (card.dataset.scenario === 'grupos') card.dataset.legacySnapshotParametersMissing = 'false';
+    syncScenarioParameterFields(card);
+    refreshAnalysisEligibility(card);
+  }
 });
 
 function updateOpportunityDecision(card) {
@@ -456,26 +554,31 @@ function updateOpportunityDecision(card) {
 $('suggestions').addEventListener('click', async (event) => {
   if (event.target.closest('.report-open')) { openReport(); return; }
   const button = event.target.closest('.run-analysis');
-  if (!button || !currentFile || mappingDirty) return;
+  if (!button || !currentFile) return;
   const card = button.closest('[data-scenario]');
   if (card.dataset.scenario === 'piloto') { openPilotPlan(); return; }
+  const eligibility = analysisEligibility(card);
+  if (!eligibility.eligible) { refreshAnalysisEligibility(card); return; }
+  const parameters = structuredClone(eligibility.parameters);
+  const scenario = card.dataset.scenario;
+  const sourceFile = currentFile;
   const output = card.querySelector('.analysis-output');
   output.classList.remove('analysis-error');
   const mapping = {};
   document.querySelectorAll('[data-role]').forEach((select) => { mapping[select.dataset.role] = select.value; });
   const requestVersion = analysisVersion;
-  button.disabled = true;
-  button.textContent = 'Calculando...';
+  analysesInFlight.add(scenario);
+  refreshAnalysisEligibility(card);
   output.hidden = true;
   card.classList.remove('has-result');
   try {
-    const response = await fetch('/api/analises', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename:currentFile.name, content:await readBase64(currentFile), mapping, scenario:card.dataset.scenario,
-        parameters:['refugo','atributos'].includes(card.dataset.scenario) ? {count_basis:card.querySelector('[data-analysis-param="count_basis"]').value} : {}})});
+    const requestBody = {filename:sourceFile.name, content:await readBase64(sourceFile), mapping, scenario, parameters};
+    const response = await fetch('/api/analises', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(requestBody)});
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Não foi possível executar esta análise.');
+    if (!response.ok) throw new Error(result.error || 'N\u00e3o foi poss\u00edvel executar esta an\u00e1lise.');
     if (requestVersion !== analysisVersion) return;
     output.innerHTML = analysisMarkup(result);
-    currentAnalyses[card.dataset.scenario] = result;
+    currentAnalyses[scenario] = result;
     executionHistory.push(result);
     pendingExecutions.push(result);
     renderExecutionHistory();
@@ -486,12 +589,16 @@ $('suggestions').addEventListener('click', async (event) => {
     setStep(4);
     requestAnimationFrame(() => goTo(output));
   } catch (error) {
-    output.textContent = error instanceof TypeError ? 'Não foi possível conectar ao servidor local. Reinicie a interface e tente novamente.' : error.message;
-    output.classList.add('analysis-error');
-    output.hidden = false;
+    if (requestVersion === analysisVersion) {
+      output.textContent = error instanceof TypeError ? 'N\u00e3o foi poss\u00edvel conectar ao servidor local. Reinicie a interface e tente novamente.' : error.message;
+      output.classList.add('analysis-error');
+      output.hidden = false;
+    }
   } finally {
-    button.disabled = mappingDirty || (['refugo','atributos'].includes(card.dataset.scenario) && !card.querySelector('[data-analysis-param="count_basis"]').value);
-    button.textContent = 'Executar análise novamente ↻';
+    analysesInFlight.delete(scenario);
+    if (card.isConnected) refreshAnalysisEligibility(card);
+    const currentCard = document.querySelector(`#suggestions [data-scenario="${CSS.escape(scenario)}"]`);
+    if (currentCard && currentCard !== card) refreshAnalysisEligibility(currentCard);
   }
 });
 
@@ -516,7 +623,7 @@ function collectProjectFields() {
     objective:$('objective')?.value || '', phase:currentPhase,
     charter:projectState.charter, measure:projectState.measure,
     causes:projectState.causes, forces:projectState.forces,
-    actions:projectState.actions, control:projectState.control, decisions:projectState.decisions, pilot:projectState.pilot,
+    actions:projectState.actions, control:projectState.control, decisions:projectState.decisions, gateReviews:projectState.gateReviews, pilot:projectState.pilot,
   };
 }
 
@@ -757,32 +864,104 @@ function phaseGates() {
   const c = projectState.charter || {};
   const m = projectState.measure || {};
   const control = projectState.control || {};
+  const causes = projectState.causes || [];
+  const actions = projectState.actions || [];
   const hasData = Boolean(currentFile && currentResult);
-  return {
-    definir: {ok:Boolean(c.problem?.trim() && c.y?.trim() && c.definition?.trim()), text:'Problema, indicador Y e definição operacional registrados.'},
-    medir: {ok:Boolean(hasData && m.source?.trim() && m.unit?.trim() && m.msa !== 'pendente'), text:'Dados disponíveis, desenho de coleta descrito e revisão do sistema de medição registrada.'},
-    analisar: {ok:projectState.causes.length > 0, text:'Ao menos uma hipótese de causa foi registrada para investigação.'},
-    implementar: {ok:projectState.actions.some((a) => a.action?.trim() && a.owner?.trim() && a.verification?.trim()), text:'Ao menos uma ação tem descrição, responsável e critério de verificação.'},
-    controlar: {ok:Boolean(control.metric?.trim() && control.owner?.trim() && control.frequency?.trim() && control.reaction?.trim()), text:'Indicador, dono, frequência e regra de reação registrados.'},
+  const validCauseIds = new Set(causes.filter((cause) => cause.status === 'validada').map((cause) => cause.id));
+  const requirements = {
+    definir: [
+      ['problema', 'Problema, local e período delimitados', Boolean(c.problem?.trim())],
+      ['indicador', 'Indicador Y, definição operacional e unidade', Boolean(c.y?.trim() && c.definition?.trim() && c.unit?.trim())],
+      ['meta', 'Linha de base e meta registradas', Boolean(c.baseline?.trim() && c.target?.trim())],
+      ['responsaveis', 'Responsável e patrocinador/dono do processo', Boolean(c.owner?.trim() && c.sponsor?.trim())],
+    ],
+    medir: [
+      ['dados', 'Dados da linha de base analisados', hasData],
+      ['coleta', 'Fonte, amostragem e unidade experimental descritas', Boolean(m.source?.trim() && m.unit?.trim())],
+      ['medicao', 'Sistema de medição avaliado ou não aplicabilidade justificada', Boolean(m.msa && m.msa !== 'pendente')],
+      ['limitacoes', 'Observações e limitações registradas', Boolean(m.notes?.trim())],
+    ],
+    analisar: [
+      ['resultados', 'Ao menos uma execução analítica registrada', Object.keys(currentAnalyses).some((key) => key !== 'piloto')],
+      ['causas', 'Causa investigada com evidência e estado explícito', causes.some((cause) => cause.evidence?.trim() && ['validada','refutada','inconclusiva'].includes(cause.status))],
+    ],
+    implementar: [
+      ['acao', 'Ação ligada a causa validada, com responsável e verificação', actions.some((action) => validCauseIds.has(action.causeId) && action.action?.trim() && action.owner?.trim() && action.verification?.trim())],
+      ['piloto', 'Plano e resultado de piloto registrados', Boolean(currentAnalyses.piloto && projectState.pilot?.indicator?.trim() && projectState.pilot?.comparability_notes?.trim())],
+    ],
+    controlar: [
+      ['monitoramento', 'Indicador, responsável, frequência e fonte definidos', Boolean(control.metric?.trim() && control.owner?.trim() && control.frequency?.trim())],
+      ['reacao', 'Regra de reação e padrão de trabalho definidos', Boolean(control.reaction?.trim() && control.standard?.trim())],
+    ],
   };
+  const labels = {definir:'Definir',medir:'Medir',analisar:'Analisar',implementar:'Implementar',controlar:'Controlar'};
+  return Object.fromEntries(Object.entries(requirements).map(([phase, items]) => {
+    const reviews = projectState.gateReviews?.[phase] || {};
+    const checks = items.map(([key, label, ready]) => {
+      const review = reviews[key] || {};
+      const reviewer = Boolean(review.reviewer?.trim());
+      const accepted = review.status === 'adequate' && ready && reviewer && Boolean(review.evidence?.trim());
+      const exception = review.status === 'not_applicable' && reviewer && Boolean(review.reason?.trim());
+      const resolved = accepted || exception;
+      const status = accepted ? 'Revisado como adequado' : exception ? 'Exceção local justificada'
+        : review.status === 'inadequate' ? 'Correção necessária' : !ready ? 'Informação pendente' : 'Aguardando revisão';
+      return {phase, key, label, ready, review, resolved, exception, status};
+    });
+    const ok = checks.every((item) => item.resolved);
+    const pending = !ok && checks.every((item) => (item.ready && item.review.status !== 'inadequate') || item.exception);
+    const exceptionCount = checks.filter((item) => item.exception).length;
+    const text = ok ? `${checks.length} requisito(s) revisado(s); ${exceptionCount} exceção(ões) justificada(s).`
+      : checks.filter((item) => !item.resolved).map((item) => `${item.label}: ${item.status.toLowerCase()}.`).join(' ');
+    return [phase, {ok, pending, exceptionCount, text, label:labels[phase], checks}];
+  }));
 }
 
 function renderPhaseChecks() {
   const gates = phaseGates();
+  const guidance = $('phase-guidance');
+  const reviewPanelOpen = guidance.querySelector('.gate-review-panel')?.open || false;
+  const activeField = document.activeElement?.matches('[data-gate-phase][data-gate-key][data-gate-field]')
+    ? {...document.activeElement.dataset} : null;
   document.querySelectorAll('.dmaic-tabs [data-phase]').forEach((button) => {
     const gate = gates[button.dataset.phase];
     const mark = button.querySelector('small');
-    if (mark) mark.textContent = gate.ok ? '✓' : '•';
+    if (mark) mark.textContent = gate.ok ? '\u2713' : gate.pending ? '\u2026' : '\u2022';
     button.classList.toggle('gate-met', gate.ok);
+    button.classList.toggle('gate-pending-review', gate.pending);
   });
   const gate = gates[currentPhase];
-  const labels = {definir:'Definir',medir:'Medir',analisar:'Analisar',implementar:'Implementar',controlar:'Controlar'};
-  $('phase-guidance').innerHTML = `<strong>${gate.ok ? 'Critério documentado' : 'Critério ainda incompleto'} · ${labels[currentPhase]}</strong><span>${escapeHtml(gate.text)} Esses critérios acompanham o registro do projeto e não certificam validade estatística nem aprovam uma passagem automaticamente.</span>`;
+  const summary = gate.ok ? `Revisão registrada \u00b7 ${gate.label}` : gate.pending ? `Aguardando revisão \u00b7 ${gate.label}` : `Pendências da fase \u00b7 ${gate.label}`;
+  const cards = gate.checks.map((item) => {
+    const review = item.review;
+    return `<article class="gate-review-card"><div class="gate-review-heading"><strong>${escapeHtml(item.label)}</strong><span class="gate-review-status ${item.resolved ? 'is-resolved' : item.review.status === 'inadequate' ? 'needs-correction' : ''}">${escapeHtml(item.status)}</span></div><p class="gate-prerequisite">${item.ready ? 'Informação registrada no projeto.' : 'Complete a informação correspondente na fase antes de marcar como adequada.'}</p><div class="gate-review-fields"><label>Estado da revisão<select data-gate-phase="${item.phase}" data-gate-key="${item.key}" data-gate-field="status"><option value="pending" ${(!review.status || review.status==='pending')?'selected':''}>Aguardando revisão</option><option value="adequate" ${review.status==='adequate'?'selected':''}>Revisado: adequado</option><option value="inadequate" ${review.status==='inadequate'?'selected':''}>Revisado: precisa de correção</option><option value="not_applicable" ${review.status==='not_applicable'?'selected':''}>Não aplicável: justificar exceção</option></select></label><label>Revisor (nome/função)<input maxlength="120" data-gate-phase="${item.phase}" data-gate-key="${item.key}" data-gate-field="reviewer" value="${escapeHtml(review.reviewer || '')}" placeholder="Identificação declarada"></label><label>Referência da evidência<input maxlength="500" data-gate-phase="${item.phase}" data-gate-key="${item.key}" data-gate-field="evidence" value="${escapeHtml(review.evidence || '')}" placeholder="Arquivo, registro, análise, ata ou local da evidência"></label><label>Justificativa / observação<textarea rows="2" maxlength="1200" data-gate-phase="${item.phase}" data-gate-key="${item.key}" data-gate-field="reason" placeholder="Obrigatória para correção necessária ou exceção">${escapeHtml(review.reason || '')}</textarea></label></div>${review.reviewed_at ? `<small>Revisão registrada em ${escapeHtml(review.reviewed_at)}</small>` : ''}</article>`;
+  }).join('');
+  guidance.innerHTML = `<strong>${summary}</strong><span>${escapeHtml(gate.text)} Uma revisão registrada não certifica validade estatística nem aprova automaticamente uma passagem DMAIC.</span><details class="gate-review-panel"><summary>Revisar evidências e critérios (${gate.checks.filter((item) => item.resolved).length}/${gate.checks.length})</summary><p class="gate-local-limit">O SigmaFlow local não autentica revisores. O nome informado é uma declaração no registro, não uma identidade verificada.</p><div class="gate-review-list">${cards}</div></details>`;
+  const reviewPanel = guidance.querySelector('.gate-review-panel');
+  if (reviewPanel) reviewPanel.open = reviewPanelOpen;
+  if (activeField) {
+    const selector = `[data-gate-phase="${activeField.gatePhase}"][data-gate-key="${activeField.gateKey}"][data-gate-field="${activeField.gateField}"]`;
+    guidance.querySelector(selector)?.focus();
+  }
   const checkIds = {medir:'measure-check',analisar:'analyze-check',implementar:'improve-check',controlar:'control-check'};
   for (const [phase,id] of Object.entries(checkIds)) {
-    if ($(id)) $(id).textContent = `${gates[phase].ok ? '✓' : '•'} ${gates[phase].text}`;
+    if ($(id)) $(id).textContent = `${gates[phase].ok ? '\u2713' : gates[phase].pending ? '\u2026' : '\u2022'} ${gates[phase].text}`;
   }
 }
+
+$('phase-guidance').addEventListener('input', (event) => {
+  const field = event.target.closest('[data-gate-phase][data-gate-key][data-gate-field]');
+  if (!field) return;
+  const {gatePhase, gateKey, gateField} = field.dataset;
+  projectState.gateReviews ||= {};
+  projectState.gateReviews[gatePhase] ||= {};
+  const review = projectState.gateReviews[gatePhase][gateKey] ||= {status:'pending', reviewer:'', evidence:'', reason:'', reviewed_at:''};
+  review[gateField] = field.value;
+  if (gateField === 'status') review.reviewed_at = field.value === 'pending' ? '' : new Date().toISOString();
+  queueProjectSave();
+});
+$('phase-guidance').addEventListener('change', (event) => {
+  if (event.target.matches('[data-gate-phase][data-gate-key][data-gate-field]')) renderPhaseChecks();
+});
 
 function renderCauses() {
   const list = $('cause-list');
@@ -826,7 +1005,7 @@ function projectPayload(id, baseVersion) {
   document.querySelectorAll('[data-role]').forEach((select) => { mapping[select.dataset.role] = select.value; });
   const payload = JSON.parse(JSON.stringify({
     id, base_version:baseVersion, title:form.title, objective:form.objective, phase:form.phase, mapping,
-    analyses:currentAnalyses, diagnosis:currentResult, investigation:{charter:form.charter,measure:form.measure,causes:form.causes,forces:form.forces,decisions:form.decisions,pilot:form.pilot},
+    analyses:currentAnalyses, diagnosis:currentResult, investigation:{charter:form.charter,measure:form.measure,causes:form.causes,forces:form.forces,decisions:form.decisions,gate_reviews:form.gateReviews,pilot:form.pilot},
     new_executions:pendingExecutions,
     actions:form.actions, control:form.control, filename:file.name,
   }));

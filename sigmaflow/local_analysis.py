@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from local_diagnosis import ROLES
 from local_visuals import present
-from local_statistics import crossed_grr, wilson_interval, compare_numeric_groups, compare_proportions, factor_anova
+from local_statistics import crossed_grr, wilson_interval, newcombe_difference, compare_numeric_groups, compare_proportions, factor_anova
 from local_survival import kaplan_meier
 from local_pilot import compare_pilot
 
@@ -105,6 +105,34 @@ def execute(df: pd.DataFrame, mapping: dict, scenario: str, *, row_limit: int | 
             for key in ("linhas", "linhas_custo", "linhas_estratificacao"):
                 if isinstance(result.get(key), list): result[key] = result[key][:row_limit]
         return result
+    if scenario == "grupos":
+        if not isinstance(mapping, dict):
+            raise ValueError("Mapeamento de colunas inválido.")
+        if not parameters:
+            # Preserve unambiguous legacy measurement runs. Counts and mixed
+            # workbooks require the explicit semantic declarations below.
+            if mapping.get("medida") and not (mapping.get("defeitos") and mapping.get("total")):
+                parameters = {"comparison_kind": "measurement"}
+            else:
+                raise ValueError("Escolha comparar medições ou a proporção de unidades rejeitadas entre grupos.")
+        kind = parameters.get("comparison_kind")
+        if kind == "measurement":
+            if parameters != {"comparison_kind": "measurement"}:
+                raise ValueError("A comparação de medições aceita apenas comparison_kind='measurement'.")
+        elif kind == "proportion":
+            if (set(parameters) != {"comparison_kind", "count_basis", "denominators_disjoint"}
+                    or parameters.get("count_basis") != "defective_units"
+                    or parameters.get("denominators_disjoint") is not True):
+                raise ValueError("Confirme unidades defeituosas e denominadores distintos por linha: não repita o mesmo total por categoria de defeito.")
+        else:
+            raise ValueError("Escolha comparar medições ou a proporção de unidades rejeitadas entre grupos.")
+        result = _execute(df, mapping, scenario, parameters=parameters)
+        result["parameters"] = dict(parameters)
+        _enrich(df, mapping, scenario, result)
+        result.update(present(scenario, result))
+        if row_limit is not None:
+            result["linhas"] = result["linhas"][:row_limit]
+        return result
     if parameters:
         raise ValueError("Este cenário não aceita parâmetros adicionais.")
     result = _execute(df, mapping, scenario)
@@ -155,10 +183,16 @@ def _enrich(df, mapping, scenario, result):
         evidence.append(f"A carta de amplitude móvel identificou {signals} amplitude(s) acima do LSC {_n(ucl)}; cada amplitude compara duas medições consecutivas.")
         notes[-1] = "Foram verificados pontos além dos limites na carta de individuais e na amplitude móvel; outras regras de sinal não foram avaliadas."
     elif scenario == "grupos":
-        if not mapping.get("medida"):
-            data = _table(df, mapping, ["grupo", "defeitos", "total"], ["defeitos", "total"], ["defeitos", "total"])
-            grouped = data.groupby("grupo", observed=True)[["defeitos", "total"]].sum()
+        if result.get("parameters", {}).get("comparison_kind") == "proportion":
+            summaries = result["group_comparison"]["groups"]
+            grouped = pd.DataFrame({"defeitos": [item["defective"] for item in summaries],
+                                    "total": [item["inspected"] for item in summaries]})
             result_test, reason = compare_proportions(grouped)
+            evidence.append("Cada taxa é soma das unidades rejeitadas / soma das unidades inspecionadas no grupo; não é a média simples das taxas por linha.")
+            contrast = result["group_comparison"].get("difference")
+            if contrast:
+                a, b = contrast["group_a"], contrast["group_b"]
+                evidence.append(f"Diferença de taxas ({b} − {a}): {_n(contrast['estimate_pp'])} pontos percentuais; IC95% Newcombe-Wilson: {_n(contrast['ci95_pp'][0])} a {_n(contrast['ci95_pp'][1])} p.p.")
         else:
             data = _table(df, mapping, ["grupo", "medida"], ["medida"])
             result_test, reason = compare_numeric_groups(data)
@@ -249,6 +283,59 @@ def _enrich(df, mapping, scenario, result):
     result["evidencias"] = evidence
 
 
+def _proportion_groups(df, mapping):
+    data = _table(df, mapping, ["grupo", "defeitos", "total"], ["defeitos", "total"], ["defeitos", "total"])
+    maximum_integer = 2**53 - 1
+    for role in ("defeitos", "total"):
+        if df[mapping[role]].map(lambda value: isinstance(value, (bool, np.bool_))).any():
+            raise ValueError("Valores lógicos não substituem contagens de unidades.")
+        if (data[role] > maximum_integer).any():
+            raise ValueError("Uma contagem excede a precisão suportada pelo navegador; reduza o recorte dos dados.")
+    if (data["total"] <= 0).any() or (data["defeitos"] > data["total"]).any():
+        raise ValueError("Cada linha precisa de total positivo e unidades rejeitadas entre zero e o total.")
+    data["grupo"] = data["grupo"].astype(str).str.strip()
+    if not 2 <= data["grupo"].nunique() <= 50:
+        raise ValueError("A comparação de proporções aceita de 2 a 50 grupos; revise se a coluna representa grupos ou identificadores.")
+    summaries = []
+    for label, part in data.groupby("grupo", sort=False, observed=True):
+        defective = sum(int(value) for value in part["defeitos"])
+        inspected = sum(int(value) for value in part["total"])
+        if inspected > maximum_integer:
+            raise ValueError("A soma de unidades inspecionadas excede a precisão suportada pelo navegador.")
+        lower, upper = wilson_interval(defective, inspected)
+        summaries.append({"label": label, "records": len(part), "defective": defective,
+                          "inspected": inspected, "rate": 100*defective/inspected,
+                          "ci95": [100*lower, 100*upper]})
+    all_defective = sum(item["defective"] for item in summaries)
+    all_inspected = sum(item["inspected"] for item in summaries)
+    if all_inspected > maximum_integer:
+        raise ValueError("A soma de unidades inspecionadas excede a precisão suportada pelo navegador.")
+    metrics = [["Grupos", len(summaries)], ["Unidades rejeitadas", all_defective],
+               ["Unidades inspecionadas", all_inspected], ["Taxa global ponderada (%)", _n(100*all_defective/all_inspected, 6)]]
+    rows = [[item["label"], item["defective"], item["inspected"], _n(item["rate"], 6),
+             _n(item["ci95"][0], 6), _n(item["ci95"][1], 6), item["records"]] for item in summaries]
+    notes = ["O numerador representa unidades defeituosas contadas uma vez, e o denominador deve corresponder às mesmas unidades inspecionadas. A confirmação de denominadores distintos foi declarada pelo analista; o sistema não detecta repetição do mesmo lote por categoria de defeito.",
+             "Wilson e o teste global pressupõem unidades independentes com probabilidade comum dentro de cada grupo. Dependência temporal, lotes correlacionados, repetições e diferenças de produto/mix exigem revisão do desenho.",
+             "IC95% Wilson são intervalos pontuais por grupo, não intervalos simultâneos. A comparação é observacional: diferenças não demonstram causa nem eficácia de uma ação."]
+    comparison = {"kind": "proportion", "group_column": mapping["grupo"], "groups": summaries, "difference": None}
+    if len(summaries) == 2:
+        a, b = summaries
+        estimate, interval = newcombe_difference(a["defective"], a["inspected"], b["defective"], b["inspected"])
+        comparison["difference"] = {"group_a": a["label"], "group_b": b["label"],
+                                     "estimate_pp": 100*estimate, "ci95_pp": [100*value for value in interval],
+                                     "method": "Newcombe-Wilson sem correção de continuidade"}
+        metrics.extend([[f"Diferença {b['label']} − {a['label']} (p.p.)", _n(100*estimate, 6)],
+                        ["IC95% da diferença — inferior (p.p.)", _n(100*interval[0], 6)],
+                        ["IC95% da diferença — superior (p.p.)", _n(100*interval[1], 6)]])
+        notes.append("A diferença em pontos percentuais é grupo B menos grupo A, na ordem de primeira aparição dos grupos. IC95% aproximado de Newcombe-Wilson para duas proporções independentes; não infira o teste a partir da sobreposição dos ICs individuais.")
+    else:
+        notes.append("Com três ou mais grupos, o teste é global: não identifica quais pares diferem. Não foram calculados contrastes pareados ou intervalos simultâneos.")
+    result = _result("Taxa de unidades rejeitadas entre grupos", "Proporções ponderadas; IC95% Wilson; teste global exploratório",
+                     metrics, ["Grupo", "Unidades rejeitadas", "Unidades inspecionadas", "Taxa (%)", "IC95% inferior (%)", "IC95% superior (%)", "Registros"], rows, notes)
+    result["group_comparison"] = comparison
+    return result
+
+
 def _execute(df: pd.DataFrame, mapping: dict, scenario: str, *, parameters=None):
     if not isinstance(mapping, dict):
         raise ValueError("Mapeamento de colunas inválido.")
@@ -273,6 +360,7 @@ def _execute(df: pd.DataFrame, mapping: dict, scenario: str, *, parameters=None)
         data = _table(df, mapping, roles, numeric, counts)
         if data["categoria"].astype(str).str.strip().eq("").any():
             raise ValueError("Preencha a categoria de defeito em todas as linhas usadas.")
+        data["categoria"] = data["categoria"].astype(str).str.strip()
         if data["defeitos"].sum() <= 0:
             raise ValueError("E necessario haver pelo menos uma unidade/ocorrencia rejeitada para calcular o Pareto.")
         if selected_costs == ["custo_unitario"] and basis != "defective_units":
@@ -299,6 +387,7 @@ def _execute(df: pd.DataFrame, mapping: dict, scenario: str, *, parameters=None)
                          ["Categoria", "Quantidade", "% da contagem", "% acumulado"], rows,
                          ["Confirme se cada linha representa unidade independente ou ocorrencia; contagens de defeitos nao equivalem necessariamente a unidades defeituosas.",
                           "Prioridade de Pareto indica concentracao observada, nao causa comprovada. Custos nao incluem custos indiretos ou de oportunidade."])
+        result["observacoes"].append("O Pareto por quantidade ordena contagens absolutas; sem denominador de produção, não compara taxas entre períodos, linhas ou turnos. O corte de 80% é uma heurística de priorização, não uma regra universal.")
         result["parameters"] = {"count_basis": basis, "count_unit": basis_label}
         if cost_col:
             costs = data.groupby("categoria", as_index=False, sort=False)[cost_col].sum().rename(columns={cost_col:"cost"})
@@ -314,7 +403,11 @@ def _execute(df: pd.DataFrame, mapping: dict, scenario: str, *, parameters=None)
             result["custo_total"] = _n(cost_total, 2)
             result["indicadores"].append(["Custo total registrado", _n(cost_total, 2)])
             result["custo_tipo"] = "unitario_multiplicado" if selected_costs[0] == "custo_unitario" else "total_por_registro"
+            result["parameters"]["cost_basis"] = result["custo_tipo"]
+            result["parameters"]["cost_column"] = mapping[selected_costs[0]]
             result["observacoes"].append("Para custo unitario, o custo da perda foi calculado como quantidade rejeitada x custo unitario. Para custo total, os valores informados por registro foram somados. Confirme moeda, periodo e ausencia de duplicacao.")
+            if selected_costs[0] == "custo_unitario":
+                result["observacoes"].append("Confirme o grão dos dados: cada unidade rejeitada deve ser contada uma única vez para evitar multiplicar novamente o mesmo custo em registros ou categorias duplicados.")
         if mapping.get("grupo"):
             group_cols = ["grupo", "categoria"]
             aggregated = data.groupby(group_cols, as_index=False, sort=False).agg(quantity=("defeitos", "sum"))
@@ -330,7 +423,8 @@ def _execute(df: pd.DataFrame, mapping: dict, scenario: str, *, parameters=None)
                     if cost_col: entry.extend([_n(row.cost, 2), _n(100*row.cost/ctotal, 2) if ctotal else None])
                     strata.append(entry)
             result["linhas_estratificacao"] = strata
-            result["colunas_estratificacao"] = ["Grupo", "Categoria", "Quantidade", "% do grupo"] + (["Custo", "% do custo do grupo"] if cost_col else [])
+            result["colunas_estratificacao"] = ["Grupo", "Categoria", "Contagem", "% da contagem do grupo"] + (["Custo", "% do custo do grupo"] if cost_col else [])
+            result["observacoes"].append("A estratificação compara a composição das contagens dentro de cada grupo; não ajusta pelo volume produzido e não estima taxa de defeito ou causa. Para comparar desempenho entre grupos, use o denominador de produção e um método apropriado para proporções.")
             result["estratificacao_total"] = len(strata)
         return result
 
@@ -406,13 +500,8 @@ def _execute(df: pd.DataFrame, mapping: dict, scenario: str, *, parameters=None)
         if scenario == "fluxo": group, value, title = "grupo", "tempo", "Tempo por etapa"
         elif scenario == "doe": group, value, title = "fator", "medida", "Resposta por nível do fator"
         else: group, value, title = "grupo", "medida", "Comparação de grupos"
-        if scenario == "grupos" and not mapping.get("medida"):
-            data = _table(df, mapping, ["grupo", "defeitos", "total"], ["defeitos", "total"], ["defeitos", "total"])
-            if (data["total"] <= 0).any() or (data["defeitos"] > data["total"]).any():
-                raise ValueError("O total deve ser positivo e não pode ser menor que os rejeitados.")
-            groups = data.groupby("grupo", sort=False)[["defeitos", "total"]].sum()
-            rows = [[str(name), int(row["defeitos"]), int(row["total"]), _n(100*row["defeitos"]/row["total"], 2)] for name, row in groups.iterrows()]
-            return _result(title, "Proporção agrupada por unidades inspecionadas", [["Grupos", len(rows)]], ["Grupo", "Rejeitados", "Total", "Taxa (%)"], rows, ["Comparação descritiva: diferenças não demonstram causa e podem depender de produto, período ou outras condições."])
+        if scenario == "grupos" and parameters.get("comparison_kind") == "proportion":
+            return _proportion_groups(df, mapping)
         data = _table(df, mapping, [group, value], [value])
         if scenario == "fluxo" and (data[value] < 0).any():
             raise ValueError("O tempo de processo não pode ser negativo.")

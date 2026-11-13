@@ -10,7 +10,9 @@
 
 ## Descrição
 
-O **SigmaFlow** é uma biblioteca Python de código aberto que automatiza a execução de projetos Lean Six Sigma. Ele aceita dados de processo brutos (CSV ou Excel) e executa automaticamente um pipeline completo: detecta o tipo de dataset, aplica os testes estatísticos adequados, gera gráficos de controle, identifica causas raiz e produz relatórios prontos para apresentação.
+O **SigmaFlow** reúne uma biblioteca Python, uma interface local de análise e uma base de plataforma corporativa para projetos Lean Six Sigma. A interface local recebe CSV ou Excel, sugere análises a partir das colunas, permite revisar o método e organiza resultados, hipóteses, ações e evidências nas fases DMAIC. Os pressupostos estatísticos e as conclusões causais exigem revisão da equipe.
+
+O estágio atual é uma **prévia local para experimentação**. A tabela abaixo descreve módulos do repositório; a disponibilidade na tela e os limites de cada método estão em [Interface local](docs/INTERFACE_LOCAL.md). A integração corporativa e a validação industrial ainda têm pendências registradas na [avaliação de completude](docs/AVALIACAO_COMPLETUDE.md). As próximas tarefas de código, por prioridade e critério de aceite, estão no [backlog de desenvolvimento](docs/BACKLOG_DESENVOLVIMENTO.md).
 
 ---
 
@@ -28,11 +30,11 @@ O **SigmaFlow** é uma biblioteca Python de código aberto que automatiza a exec
 | Funcionalidade | Descrição |
 |---|---|
 | **Auto-detecção de dataset** | Identifica automaticamente SPC, Capability, Pareto, DOE, Logística, Serviço |
-| **Pipeline DMAIC completo** | Define → Measure → Analyze → Improve → Control |
+| **Estrutura DMAIC** | Define → Measure → Analyze → Improve → Control, com registros e revisões locais |
 | **Capacidade de processo** | Cp, Cpk, Cpu, Cpl, DPMO, nível sigma |
 | **Cartas de controle** | XmR, X-bar/R, CUSUM, EWMA com regras Western Electric |
 | **Testes estatísticos** | Shapiro-Wilk, Anderson-Darling, t-test, ANOVA, Mann-Whitney |
-| **Root cause analysis** | Matriz de correlação + ranking de variáveis |
+| **Investigação de causas** | Correlação e ranking geram hipóteses; a equipe registra e valida evidências |
 | **DOE / Regressão** | ANOVA, efeitos principais, R², preditores significativos |
 | **MSA / Gauge R&R** | Análise de sistema de medição |
 | **FMEA** | Cálculo de RPN e ranking de modos de falha |

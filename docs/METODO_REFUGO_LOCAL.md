@@ -6,12 +6,14 @@ Na oportunidade de refugo, escolha se a contagem representa unidades defeituosas
 
 O Pareto principal soma a contagem por categoria, ordena do maior para o menor e calcula participacao e acumulado. Se houver uma coluna de custo, um Pareto separado e calculado por custo:
 
+Os graficos mostram barras ordenadas e a linha do percentual acumulado. A marca de 80% e uma referencia heuristica de concentracao, nao uma regra universal de priorizacao. A sugestao informa se custo e grupo foram mapeados; se custo unitario e custo total estiverem ambos selecionados, a execucao e bloqueada ate que uma unica base seja definida.
+
 - **Custo por unidade rejeitada:** quantidade de unidades defeituosas multiplicada pelo custo unitario. Bloqueado quando a contagem foi declarada como ocorrencias.
 - **Custo total por registro:** soma os valores de custo total informados em cada linha; nao multiplica pela quantidade.
 
-A moeda, periodo, inclusao de retrabalho, custos indiretos, duplicidades e politica contabil devem ser confirmados. O valor calculado e apenas o custo registrado nos dados.
+A moeda, periodo, inclusao de retrabalho, custos indiretos, duplicidades e politica contabil devem ser confirmados. O valor calculado e apenas o custo registrado nos dados. Para multiplicar custo unitario, confirme que cada unidade rejeitada entra uma vez na contagem; registros repetidos por unidade podem duplicar o valor.
 
-Quando o papel `grupo` esta mapeado (por exemplo, linha ou turno), a tabela estratifica categoria e quantidade dentro de cada grupo. Percentuais usam o total do grupo. Diferencas orientam perguntas de investigacao e nao atribuem causa ao grupo.
+Quando o papel `grupo` esta mapeado (por exemplo, linha ou turno), a tabela estratifica categoria e contagem dentro de cada grupo. Percentuais descrevem a composicao da contagem rejeitada naquele grupo, sem denominador de producao. Nao sao taxas de defeito nem comparacao de desempenho entre grupos com volumes diferentes. Diferencas orientam perguntas de investigacao e nao atribuem causa ao grupo.
 
 ## Carta p e carta np
 

@@ -67,7 +67,7 @@ class LocalAnalysisTests(unittest.TestCase):
         result = execute(df, {"categoria": "tipo", "defeitos": "qtd"}, "refugo", parameters={"count_basis":"defective_units"})
         self.assertEqual(result["linhas"][0][:2], ["A", 6])
         self.assertEqual(metrics(result)["Total de unidades defeituosas"], 9)
-        self.assertEqual(result["grafico"]["itens"][0], {"label": "A", "value": 6})
+        self.assertEqual(result["grafico"]["itens"][0], {"label": "A", "value": 6, "cumulative": 66.67})
         self.assertIn("A", result["insight"])
 
     def test_carta_p_e_limites_variaveis(self):
@@ -146,10 +146,34 @@ def test_refugo_requires_explicit_count_semantics_and_cost_denominator():
     assert result["linhas"][0][:2] == ["A",5]
     assert result["linhas_custo"][0][:2] == ["B",30.0]
     assert result["linhas_estratificacao"][0][:2] == ["L1","A"]
+    assert result["colunas_estratificacao"][2] == "Contagem"
+    assert any("não ajusta pelo volume produzido" in note for note in result["observacoes"])
     assert result["custo_total"] == 42.5
     assert "unitario_multiplicado" == result["custo_tipo"]
     with pytest.raises(ValueError, match="Custo unitario so pode"):
         execute(df,{"categoria":"category","defeitos":"count","custo_unitario":"unit_cost"},"refugo",parameters={"count_basis":"defect_occurrences"})
+
+
+def test_refugo_cost_total_is_summed_per_record_and_zero_has_no_cost_chart():
+    df = pd.DataFrame({"category":["A","A","B"],"count":[2,1,1],"record_cost":[7.,3.,10.]})
+    mapping = {"categoria":"category","defeitos":"count","custo_total":"record_cost"}
+    result = execute(df,mapping,"refugo",parameters={"count_basis":"defective_units"})
+    assert result["custo_total"] == 20.0
+    assert result["custo_tipo"] == "total_por_registro"
+    assert result["linhas_custo"] == [["A",10.0,50.0,50.0],["B",10.0,50.0,100.0]]
+    assert result["grafico_custo"]["tipo"] == "pareto"
+    assert result["grafico_custo"]["itens"][-1]["cumulative"] == 100.0
+
+    zero = execute(df.assign(record_cost=0),mapping,"refugo",parameters={"count_basis":"defective_units"})
+    assert all(row[2:] == [None,None] for row in zero["linhas_custo"])
+    assert "grafico_custo" not in zero
+    assert "acumulado por custo não foram calculados" in zero["insight"]
+
+
+def test_refugo_trims_category_labels_before_grouping():
+    df = pd.DataFrame({"category":["Vedação", " Vedação "],"count":[2,3]})
+    result = execute(df,{"categoria":"category","defeitos":"count"},"refugo",parameters={"count_basis":"defective_units"})
+    assert result["linhas"] == [["Vedação",5,100.0,100.0]]
 
 
 

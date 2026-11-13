@@ -36,9 +36,34 @@ function renderChart(chart) {
     }).join('');
     const accessible = `${chart.titulo || 'Comparação por período'}. ${items.map((item) => `${item.label}: ${fmt(item.value)}, ${intervalText(item)}`).join('; ')}${reference !== null ? `. ${chart.referencia.label || 'Meta'}: ${fmt(reference)}` : ''}`;
     graphic = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(accessible)}">${grid}${target}${points}<line x1="${left}" y1="${axisY}" x2="${width-right}" y2="${axisY}" class="chart-axis"/></svg>`;
-    legend = `<div class="chart-legend"><span><i style="background:${colors[0]}"></i>Ponto: estimativa · segmento: intervalo de confiança por período</span>${reference !== null ? `<span><i style="background:${colors[1]}"></i>${escapeHtml(chart.referencia.label || 'Meta')} = ${escapeHtml(fmt(reference))} (tracejada)</span>` : ''}</div>`;
-    note = `<p class="chart-caption">${chart.nota ? `${escapeHtml(chart.nota)} ` : ''}Os intervalos por período não substituem o intervalo da diferença entre antes e depois. Consulte os indicadores e as limitações da análise.</p>`;
+    legend = `<div class="chart-legend"><span><i style="background:${colors[0]}"></i>${escapeHtml(chart.interval_label || 'Ponto: estimativa · segmento: intervalo de confiança por período')}</span>${reference !== null ? `<span><i style="background:${colors[1]}"></i>${escapeHtml(chart.referencia.label || 'Meta')} = ${escapeHtml(fmt(reference))} (tracejada)</span>` : ''}</div>`;
+    note = `<p class="chart-caption">${chart.nota ? `${escapeHtml(chart.nota)} ` : ''}${escapeHtml(chart.interval_note || 'Os intervalos por período não substituem o intervalo da diferença entre antes e depois. Consulte os indicadores e as limitações da análise.')}</p>`;
     if (items.length < chart.itens.length) note += '<p class="chart-caption">Itens sem estimativa numérica não foram desenhados; valores ausentes não foram convertidos em zero.</p>';
+  } else if (chart.tipo === 'pareto' && chart.itens.length) {
+    const width = 720, height = 360, left = 58, right = 58, top = 25, bottom = 95;
+    const items = chart.itens.filter((item) => Number.isFinite(Number(item.value)) && Number.isFinite(Number(item.cumulative)));
+    if (!items.length) return '';
+    const max = Math.max(1, ...items.map((item) => Number(item.value)));
+    const plotHeight = height - top - bottom, plotWidth = width - left - right;
+    const slot = plotWidth / items.length, barWidth = Math.min(36, slot * .62);
+    const x = (index) => left + slot * index + slot / 2;
+    const yValue = (value) => top + plotHeight * (1 - Number(value) / max);
+    const yPercent = (value) => top + plotHeight * (1 - Number(value) / 100);
+    const grid = [0, .25, .5, .75, 1].map((fraction) => {
+      const value = max * fraction, yy = yValue(value), percent = Math.round(fraction * 100);
+      return `<line x1="${left}" y1="${yy}" x2="${width-right}" y2="${yy}" class="chart-grid"/><text x="${left-8}" y="${yy+4}" text-anchor="end" class="chart-label">${escapeHtml(fmt(value))}</text><text x="${width-right+8}" y="${yy+4}" class="chart-label">${percent}%</text>`;
+    }).join('');
+    const bars = items.map((item,index) => {
+      const yy = yValue(item.value), xx = x(index) - barWidth / 2;
+      const label = shortLabel(item.label);
+      return `<rect x="${xx}" y="${yy}" width="${barWidth}" height="${Math.max(0,top+plotHeight-yy)}" rx="3" fill="${colors[0]}"><title>${escapeHtml(`${item.label}: ${fmt(item.value)}`)}</title></rect><text transform="translate(${x(index)},${height-bottom+18}) rotate(-38)" text-anchor="end" class="chart-label">${escapeHtml(label)}</text>`;
+    }).join('');
+    const linePoints = items.map((item,index) => `${x(index)},${yPercent(item.cumulative)}`).join(' ');
+    const points = items.map((item,index) => `<circle cx="${x(index)}" cy="${yPercent(item.cumulative)}" r="3.5" fill="${colors[1]}"><title>${escapeHtml(`${item.label}: acumulado ${fmt(item.cumulative)}%`)}</title></circle>`).join('');
+    const accessible = `${chart.titulo}. ${items.map((item) => `${item.label}: ${fmt(item.value)}, acumulado ${fmt(item.cumulative)}%`).join('; ')}`;
+    graphic = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(accessible)}">${grid}${bars}<polyline fill="none" stroke="${colors[1]}" stroke-width="2.5" points="${linePoints}"/>${points}<line x1="${left}" y1="${top+plotHeight}" x2="${width-right}" y2="${top+plotHeight}" class="chart-axis"/></svg>`;
+    legend = `<div class="chart-legend"><span><i style="background:${colors[0]}"></i>Contagem / valor por categoria</span><span><i style="background:${colors[1]}"></i>Percentual acumulado (eixo direito)</span></div>`;
+    note = '<p class="chart-caption">A linha acumulada facilita localizar concentração; o corte de 80% é apenas uma referência heurística, não uma regra de priorização.</p>';
   } else if (chart.tipo === 'barras' && chart.itens.length) {
     const width = 600, left = 170, right = 70, top = 20, rowHeight = 35;
     const height = top + chart.itens.length * rowHeight + 30;

@@ -1,20 +1,19 @@
 # Critérios para concluir o protótipo local
 
-Auditoria de escopo de 13/11/2026. Apresentar a ferramenta como assistente de análise local, não como sistema que aprova métodos ou comprova causa e saving automaticamente.
+Revisão de escopo em 13/11/2026. O SigmaFlow é um assistente local de análise e investigação. A avaliação completa, incluindo a diferença entre o protótipo e o produto corporativo, está em [AVALIACAO_COMPLETUDE.md](AVALIACAO_COMPLETUDE.md).
 
-| Frente | Evidência atual | Critório pendente |
+| Frente | Evidência atual | Critério pendente |
 |---|---|---|
-| Histórico local | Snapshots por versão, CAS, relatório sem recálculo, exportação por versão, cópia/restauraóão com motivo; API e navegador verificados | Evento imutável por rodada de cálculo; banco transacional antes de compartilhar entre processos/usuórios |
-| Refugo (P0) | Sugestão e Pareto por quantidade; carta p em contexto apropriado | Semântica explícita para unidades defeituosas versus ocorrências; Pareto de quantidade e custo unitário/total; estratificação pelo grupo selecionado; cartas p/np com confirmação de unidade defeituosa e np somente para tamanho fixo. Pendente: benchmarks independentes para limites, subgrupos pequenos/zeros e desenho de linha de base. |
-| Validade de cálculos | Regressão automatizada e rastreabilidade de código/parómetros | Benchmarks independentes por método e revisão de especialista antes de conclusão industrial |
-| DMAIC | Charter, medição, Ishikawa/6M, 5 Porquês, decisões, ações e piloto antes/depois | Evidência/responsóvel por requisito; separar execuóão, revisão e aprovaóão com exceóães justificadas |
-| Estudo das aulas | `fila_estudos.json`: 160 itens, 144 estudados e 16 pendentes | `PROGRESSO_ESTUDO_BELTS.md` declara 135/135. Corrigir e revisar os 16 pendentes antes de declarar estudo completo |
-| Produto corporativo | Backlog de integração, permissões, multiusuário e governança | Fora do protótipo local; bloqueio antes de clientes/dados reais compartilhados |
+| Histórico local | Snapshots por versão, CAS, execuções preservadas por rodada, relatório sem recálculo e pacote reproduzível | Coordenação transacional antes de compartilhar entre processos/usuários; validar backup e recuperação na arquitetura compartilhada |
+| Refugo | Pareto por contagem/custo com acumulado; estrato simples; bases de custo explícitas; cartas p/np; comparação de taxas com denominadores, Wilson e Newcombe para dois grupos | Identificar unidades/subgrupos para detectar denominadores repetidos, estratificação multidimensional, mais referências independentes e regras de sinal |
+| Validade dos cálculos | Testes de regressão e casos de referência; rastreabilidade de código, dados e parâmetros | Matriz de liberação por método, revisão estatística independente e caso industrial representativo |
+| DMAIC | Charter, medição, 6M, 5 Porquês, hipóteses, ações, piloto, controle e revisão por requisito no relatório | Revisores autenticados, aprovação independente, auditoria de alterações e avaliação humana do conteúdo das evidências |
+| Estudos | Green Belt 84/84 e Black Belt 51/51 constam como estudados: 135/135 no escopo desses dois cursos | A fila ampliada tem White Belt 4/5 e Yellow Belt 5/20: 16 pendências fora do escopo Green/Black; estudo registrado não valida implementação |
+| Produto corporativo | Há código de API, modelos e uma interface corporativa separada | Integrar a jornada, verificar autorização/isolamento, concorrência, operação e governança antes de liberar uso compartilhado |
 
-## Próxima sequência
+## Critérios para a próxima entrega local
 
-1. Fechar refugo ponta a ponta: semântica do indicador, validação, Pareto de custo/quantidade, estratificação, cartas p/np, hipóteses, aóão, piloto e controle.
-2. Comparar cada cálculo com caso independente/manual revisado e documentar limites.
-3. Persistir cada reexecução sem sobrescrever evidência anterior.
-4. Criar gates DMAIC com requisitos, evidências, responsóveis e estados separados para execuóão/revisóo/aprovaóão.
-5. Reconciliar fila de estudo e documento de progresso.
+1. Concluir um projeto de refugo representativo com dados, hipótese, evidência, ação, piloto e controle, revisado pelo usuário Black Belt.
+2. Conferir cada método liberado com referências independentes e registrar seus pressupostos, casos de borda e limitações.
+3. Verificar a jornada de upload, parâmetros, erros, persistência, reabertura e exportação com os mesmos resultados e contexto.
+4. Publicar o escopo suportado e os itens ainda parciais, sem equiparar testes de regressão a validação industrial.
